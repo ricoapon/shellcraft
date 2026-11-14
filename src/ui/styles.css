@@ -1,0 +1,20 @@
+:root {
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  color: #d7e3dc;
+  background: #0b100f;
+  font-synthesis: none;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+.workstation { max-width: 1400px; margin: auto; padding: 28px; }
+.workstation-header { display: flex; align-items: baseline; gap: 24px; margin-bottom: 24px; }
+h1 { margin: 0; font-size: 20px; color: #8fdbab; }
+.workstation-header span { color: #91a399; font-size: 13px; }
+.terminal-panel { border: 1px solid #2b3b33; border-radius: 8px; background: #101816; padding: 18px; }
+
+@media (max-width: 600px) {
+  .workstation { padding: 12px; }
+  .workstation-header { flex-wrap: wrap; gap: 8px 24px; }
+}
