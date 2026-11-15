@@ -4,17 +4,353 @@
   background: #0b100f;
   font-synthesis: none;
   color-scheme: dark;
+  --border: #2b3b33;
+  --muted: #91a399;
+  --accent: #8fdbab;
 }
-
-* { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; }
-.workstation { max-width: 1400px; margin: auto; padding: 28px; }
-.workstation-header { display: flex; align-items: baseline; gap: 24px; margin-bottom: 24px; }
-h1 { margin: 0; font-size: 20px; color: #8fdbab; }
-.workstation-header span { color: #91a399; font-size: 13px; }
-.terminal-panel { border: 1px solid #2b3b33; border-radius: 8px; background: #101816; padding: 18px; }
-
-@media (max-width: 600px) {
-  .workstation { padding: 12px; }
-  .workstation-header { flex-wrap: wrap; gap: 8px 24px; }
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+button,
+select {
+  border: 1px solid #34483d;
+  border-radius: 4px;
+  background: #18261e;
+  color: inherit;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+button {
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  background: #2a4233;
+  border-color: #60836c;
+}
+button:focus-visible,
+a:focus-visible,
+tr:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+a {
+  color: var(--accent);
+}
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+h3 {
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+p {
+  font-size: 12px;
+  line-height: 1.8;
+}
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+}
+.muted {
+  color: var(--muted);
+}
+.workstation {
+  display: flex;
+  height: 100dvh;
+  padding: clamp(10px, 1.5vw, 24px);
+  background: radial-gradient(ellipse at top, #1b2924, #0b100f 75%);
+}
+.terminal-window {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #34483d;
+  border-radius: 8px;
+  background: #101816;
+  box-shadow: 0 16px 48px #0006;
+}
+.window-titlebar {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #19241f;
+}
+.window-titlebar h1 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+}
+.workspace-body {
+  display: flex;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.work-area {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+.terminal-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+}
+.terminal-output {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.loading-message,
+.storage-error {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 12px;
+}
+.storage-error {
+  color: #f0ca8b;
+  border-bottom: 1px solid var(--border);
+}
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: #101816;
+}
+.editor-file {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  font-size: 11px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #b6d8c0;
+}
+.monaco-container {
+  flex: 1;
+  min-height: 0;
+}
+.editor-status {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 0 0 34px;
+  height: 34px;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 6px 10px;
+  border-top: 1px solid var(--border);
+}
+.editor-shortcuts {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vim-status {
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  line-height: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.vim-status input {
+  width: clamp(120px, 35vw, 480px);
+  max-width: 100%;
+  height: 20px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  vertical-align: top;
+}
+.editor-message {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  padding: 6px 10px;
+  background: #19241f;
+  color: #f0ca8b;
+}
+.custom-screens {
+  width: clamp(280px, 35vw, 520px);
+  flex-shrink: 0;
+  overflow: auto;
+  border-left: 1px solid var(--border);
+}
+.player-panel {
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+.panel-title {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+}
+.screen-stack {
+  display: grid;
+  gap: 10px;
+}
+.screen-card {
+  padding: 12px;
+  min-width: 0;
+  overflow: hidden;
+}
+.screen-card h3 {
+  color: #b9d8c2;
+  font-weight: 500;
+}
+.screen-card pre {
+  max-height: 320px;
+  overflow: auto;
+}
+.error-message {
+  padding: 10px;
+  color: #efaaa3;
+  font-size: 12px;
+}
+.error-message pre {
+  max-height: 240px;
+  overflow: auto;
+}
+.table-scroll {
+  overflow: auto;
+  max-height: 340px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11px;
+}
+th,
+td {
+  text-align: left;
+  padding: 7px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+th {
+  position: sticky;
+  top: 0;
+  background: #19241f;
+}
+th button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+tr[tabindex] {
+  cursor: pointer;
+}
+tr[tabindex]:hover {
+  background: #22362a;
+}
+.bar-chart {
+  display: grid;
+  gap: 6px;
+}
+.bar-chart > button {
+  display: grid;
+  grid-template-columns: minmax(60px, 1fr) 1.5fr 45px;
+  gap: 8px;
+  align-items: center;
+  border: 0;
+  padding: 3px 0;
+  background: transparent;
+  font-size: 10px;
+  text-align: left;
+}
+.bar-chart > button:disabled {
+  opacity: 1;
+}
+.bar-track {
+  height: 8px;
+  border-radius: 2px;
+  background: #243b2c;
+  overflow: hidden;
+}
+.bar-track > span {
+  display: block;
+  height: 100%;
+  background: #8fdbab;
+}
+.line-chart {
+  width: 100%;
+  height: auto;
+}
+.line-chart text {
+  fill: #91a399;
+  font-size: 11px;
+}
+.network-graph {
+  height: 280px;
+  min-width: 0;
+}
+.mermaid-diagram {
+  overflow: auto;
+}
+.mermaid-diagram svg {
+  max-width: 100%;
+}
+@media (max-width: 850px) {
+  .workspace-body {
+    flex-direction: column;
+  }
+  .custom-screens {
+    width: 100%;
+    max-height: 35dvh;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+@media (max-width: 640px), (max-height: 480px) {
+  .workstation {
+    padding: 0;
+  }
+  .terminal-window {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .terminal-panel {
+    padding: 10px;
+  }
 }
