@@ -1,4 +1,4 @@
-import { stringArguments, type Command } from './command';
+import { commandHelp, stringArguments, type Command } from './command';
 import { list, string } from '../runtime/types';
 export const help: Command = {
   name: 'help',
@@ -15,12 +15,7 @@ export const help: Command = {
       const command = commands.find((c) => c.name === name);
       if (!command) throw new Error('Unknown command: ' + name);
       return {
-        value: [
-          'Usage: ' + (command.usage ?? command.name),
-          ...(command.description ? [command.description] : []),
-          ...(command.details ? [command.details] : []),
-          ...(command.example ? ['Example: ' + command.example] : []),
-        ],
+        value: commandHelp(command),
       };
     }
     return {

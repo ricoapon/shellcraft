@@ -1,4 +1,5 @@
 import { CommandRegistry } from '../commands/registry';
+import { commandHelp } from '../commands/command';
 import type { Command, CommandInfo, CommandResult } from '../commands/command';
 import type { CommandSystem } from '../commands/system';
 import { LanguageSession } from '../runtime/interpreter';
@@ -49,7 +50,14 @@ export class Shell {
       commands: { list: () => this.available() },
     });
     const host = {
-      commands: () => this.registry.definitions(),
+      commands: () => {
+        const visible = new Set(this.registry.available().map((command) => command.name));
+        return this.registry.definitions().map((command) => ({
+          name: command.name,
+          signatures: command.signatures,
+          help: visible.has(command.name) ? commandHelp(command) : undefined,
+        }));
+      },
       read,
       display: (value: Value) => this.display(value),
       invoke: async (name: string, args: Value[], type?: import('../runtime/types').Type) => {

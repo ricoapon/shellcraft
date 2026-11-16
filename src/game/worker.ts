@@ -92,6 +92,23 @@ async function handle(request: GameRequest) {
       case 'export':
         post({ id: request.id, ok: true, save: engine.snapshot() });
         return;
+      case 'reset': {
+        clearTimeout(draftSaveTimer);
+        const replacement = new GameEngine();
+        await replacement.initialize();
+        try {
+          await storage.save(replacement.snapshot());
+        } catch {
+          replacement.dispose();
+          throw new Error('Could not reset the save. Your existing game is preserved.');
+        }
+        engine.dispose();
+        engine = replacement;
+        canSave = true;
+        warning = undefined;
+        post({ id: request.id, ok: true, view: engine.view(), entries: engine.shell.entries });
+        return;
+      }
       case 'import': {
         const replacement = new GameEngine(validateGameSave(request.payload));
         await replacement.initialize();

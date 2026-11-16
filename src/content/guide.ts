@@ -34,7 +34,7 @@ export const guideSections = [
   {
     id: 'api',
     title: 'Commands and types',
-    text: 'Use help for available commands and help <command> for usage. ls returns list<File>; cat and pwd return string; neighbors returns list<string>; mission status returns id/status fields; mission list returns level records; mission submit returns bool. echo displays any value and returns void. use /home/lib.sc imports typed functions and aliases from declaration-only files. There are no pipes, methods, classes, browser globals, external processes, timers, or JavaScript execution. Execution has step, allocation, depth, source-size and output limits.',
+    text: 'Use help for available commands and help <command> for usage. Invalid command arguments show the command help automatically. ls returns list<File>; cat and pwd return string; neighbors returns list<string>; mission status returns id/status fields; mission list returns level records; mission submit returns bool. echo displays any value and returns void. use /home/lib.sc imports typed functions and aliases from declaration-only files. There are no pipes, methods, classes, browser globals, external processes, timers, or JavaScript execution. Execution has step, allocation, depth, source-size and output limits.',
   },
   {
     id: 'stuck',
@@ -44,6 +44,6 @@ export const guideSections = [
   {
     id: 'recovery',
     title: 'Saves and recovery',
-    text: 'Files, stars, active level, and editor drafts are saved in this browser. Terminal output, history, variables and function registrations are never saved. Use save export/import for backups and one tab per origin. Existing player-owned files, including old JavaScript, are preserved; JavaScript cannot execute. Missing .sc starter files are installed without replacing your files.',
+    text: 'Files, stars, active level, and editor drafts are saved in this browser. Terminal output, history, variables and function registrations are never saved. Use save export/import for backups and one tab per origin. Bare save shows help. save reset asks for confirmation before permanently deleting workspace files, progress, stars, and drafts and returning to a fresh workstation; export a backup first. Startup and migration preserve existing player-owned files, including old JavaScript; JavaScript cannot execute. Missing .sc starter files are installed without replacing your files.',
   },
 ] as const;

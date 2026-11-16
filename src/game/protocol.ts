@@ -9,6 +9,7 @@ export type RequestType =
   | 'closeEditor'
   | 'openEditor'
   | 'export'
+  | 'reset'
   | 'import';
 export interface GameRequest {
   id: number;

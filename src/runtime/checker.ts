@@ -388,7 +388,10 @@ export class Checker {
     }
     this.error(
       e,
-      failures.at(-1) ?? `Invalid arguments for ${e.name}. Check help ${e.name} for usage.`,
+      [
+        failures.at(-1) ?? `Invalid arguments for ${e.name}.`,
+        ...(this.natives.get(e.name)?.help ?? []),
+      ].join('\n'),
     );
   }
 }

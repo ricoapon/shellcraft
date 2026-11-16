@@ -138,6 +138,13 @@ export function App() {
     const reply = response.reply!;
     if (reply.action === 'export') await exportSave();
     if (reply.action === 'import') importInput.current?.click();
+    if (
+      reply.action === 'reset' &&
+      window.confirm(
+        'Reset Shellcraft? This permanently deletes all workspace files, mission progress, stars, and editor drafts. Export a backup with save export first.',
+      )
+    )
+      await request('reset');
     return reply;
   }
 

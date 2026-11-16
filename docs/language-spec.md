@@ -214,7 +214,7 @@ echo $current.release
 - `edit`, `vim`, `run`, and `use` resolve source files in the personal workspace, including while connected to a level. They do not redirect filesystem commands to home.
 - `mission submit --script /home/solve.sc [seed]` verifies a script on fresh cases. Each case has fresh variables, navigation, and discoveries; the script must call `mission submit` successfully without intervention. Full verification may award the optional automation star; a supplied seed runs one practice case. Verification programs cannot start, reset, or leave missions; ordinary programs can.
 - Mission selection, reset, briefing, status, hints, and leaving are available to scripts through the same commands as the terminal. Script verification, editor, clearing, and save commands are terminal-only; scripts cannot invoke them or `run`. These restrictions concern UI/reentrant operations, not campaign progression.
-- `help` includes available built-ins and terminal-defined/imported functions with their signatures. `help <command>` shows detailed usage. Availability rules apply equally to execution and help.
+- `help` includes available built-ins and terminal-defined/imported functions with their signatures. `help <command>` shows detailed usage. Invalid native-command arguments include this detailed help with the error; static validation still prevents execution of invalid submissions. Availability rules apply equally to execution and help. Bare `save` shows the same help as `help save`. `save export`, `save import`, and `save reset` are terminal-only actions. Reset requires browser confirmation before permanently replacing files, progress, stars, and drafts with a fresh workstation.
 
 ## Diagnostics and editor support
 

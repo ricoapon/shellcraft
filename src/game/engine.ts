@@ -31,7 +31,7 @@ export interface EngineReply {
   clearScreen?: true;
   host: string;
   directory: string;
-  action?: 'export' | 'import';
+  action?: 'export' | 'import' | 'reset';
 }
 export interface EngineView {
   host: string;

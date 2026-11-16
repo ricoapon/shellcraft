@@ -21,8 +21,8 @@ it('rejects invalid arguments before effects and keeps navigation intact after e
   expect((await g.execute('cd /missing')).output.join()).toContain('Path not found');
   expect((await g.execute('pwd')).output).toEqual(['/home']);
   expect((await g.execute('write /home/a 1')).output.join()).toContain('Expected string');
-  expect((await g.execute('cat')).output.join()).toContain('usage');
-  expect((await g.execute('ls /home /')).output.join()).toContain('usage');
+  expect((await g.execute('cat')).output.join()).toContain('Usage: cat <path>');
+  expect((await g.execute('ls /home /')).output.join()).toContain('Usage: ls');
 });
 it('uses explicit quoting for filenames with spaces and treats dash names literally', async () => {
   const g = new GameEngine();

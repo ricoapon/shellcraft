@@ -7,7 +7,7 @@ export interface CommandResult {
   value?: Value;
   output?: readonly string[];
   clearScreen?: true;
-  action?: 'export' | 'import';
+  action?: 'export' | 'import' | 'reset';
 }
 export interface CommandInfo {
   readonly name: string;
@@ -23,6 +23,14 @@ export interface Command extends CommandInfo, NativeCommand {
     system: CommandSystem,
     typeArgument?: Type,
   ): CommandResult | Promise<CommandResult>;
+}
+export function commandHelp(command: CommandInfo): string[] {
+  return [
+    'Usage: ' + (command.usage ?? command.name),
+    ...(command.description ? [command.description] : []),
+    ...(command.details ? [command.details] : []),
+    ...(command.example ? ['Example: ' + command.example] : []),
+  ];
 }
 export const textSignature = (minimum = 0, maximum = minimum, terminalOnly = false) => ({
   parameters: Array.from({ length: maximum }, () => string),
