@@ -37,10 +37,10 @@ export const missions: readonly MissionDefinition[] = [
     entry: 'archive',
     prerequisite: 'files-1',
     briefing:
-      'Find the PASSWORD marker among the files in /notes. Your first search can be manual or scripted. Scripting is now available: guide scripts explains the small building blocks.',
+      'Find the PASSWORD marker among the files in /notes. Your first search can be manual or scripted. Scripting is available from the start: guide scripts explains the small building blocks.',
     hints: [
       'Use ls /notes to see the files, then read them.',
-      'A script can loop over ctx.fs.list("/notes") and read each entry.path.',
+      'Use for entry in (ls /notes) and cat $entry.path to read each file.',
       'Search each file for PASSWORD= and submit its value.',
     ],
   },
@@ -53,7 +53,7 @@ export const missions: readonly MissionDefinition[] = [
     briefing:
       'Find PASSWORD somewhere below /archive. Directories can contain other directories. Extend your existing search rather than starting over.',
     hints: [
-      'ls accepts a directory path. Inspect entry.type in a script.',
+      'ls accepts a directory path. Inspect $entry.type in a script.',
       'For a directory, repeat the same search inside it; for a file, read its contents.',
       'A recursive function or a list of directories still to visit can both work.',
     ],
@@ -81,7 +81,7 @@ export const missions: readonly MissionDefinition[] = [
       '/deploy/current.json identifies the active release. Find that release under /credentials and submit its password. Other releases are decoys.',
     hints: [
       'Start by reading current.json.',
-      'JSON.parse(ctx.fs.read(path)) converts JSON text into fields you can inspect.',
+      'Declare a record type, then use from-json<Type> (cat $path) to inspect JSON fields.',
       'Match the release ID before choosing a password.',
     ],
   },
@@ -121,7 +121,7 @@ export const missions: readonly MissionDefinition[] = [
       'Several machines branch out from gateway. Find PASSWORD in their /notes directories. Reuse your file search; add exploration of neighboring hosts.',
     hints: [
       'Use exit to return to the previous machine. At the entry machine, use mission leave to go home.',
-      'Scripts can call ctx.network.neighbors() and ctx.network.connect(id). A handle has its own fs and does not move the terminal.',
+      'Scripts use neighbors, ssh $id, and exit exactly as in the shell. Navigation persists after a run.',
     ],
   },
   {
@@ -135,7 +135,7 @@ export const missions: readonly MissionDefinition[] = [
     hints: [
       'Keep a record of machines already visited.',
       'Mark a host visited before exploring its neighbors.',
-      'A Set of host IDs works well for detecting revisits.',
+      'Keep a list<string> of visited host IDs; contains tests membership and append adds an ID.',
     ],
   },
   {

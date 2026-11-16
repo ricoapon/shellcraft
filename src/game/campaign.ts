@@ -81,7 +81,7 @@ export class Campaign {
       'You are connected to ' +
         this.world.host.id +
         '. Your scripts travel with you; edit and run use your personal /home code workspace.',
-      'Submit the password with mission submit <value>. For an optional automation star: mission submit --script /home/solve.js.',
+      'Submit the password with mission submit <value>. For an optional automation star: mission submit --script /home/solve.sc.',
       'Need a nudge? mission hint gives staged clues. mission leave returns to your workspace.',
     ];
   }
@@ -120,7 +120,7 @@ export class Campaign {
   assertWritable(_path: string) {
     if (this.world.host.id !== 'home')
       throw new Error(
-        'Level evidence is read-only. Use edit /home/solve.js for your personal tools.',
+        'Level evidence is read-only. Use edit /home/solve.sc for your personal tools.',
       );
   }
   submit(answer: string): string[] {
@@ -142,7 +142,7 @@ export class Campaign {
           : 'Solved. You can return later for the automation star.',
       ...(id === 'files-1' && previous === 0
         ? [
-            'Try building your own search for files-2. edit /home/solve.js and guide scripts help you get started.',
+            'Try building your own search for files-2. edit /home/solve.sc and guide scripts help you get started.',
           ]
         : []),
       ...(id === 'files-2' && previous === 0

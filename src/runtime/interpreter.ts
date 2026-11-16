@@ -102,6 +102,8 @@ export class LanguageSession {
   }
   async execute(source: string, options: ExecutionOptions = {}): Promise<void> {
     const mode = options.mode ?? 'terminal';
+    const oldBindings = new Map(this.symbols.bindings);
+    const oldCells = new Map(this.globals.values);
     this.checked = this.analyze(source, options.source, mode);
     if (mode === 'script') this.globals = new Scope();
     this.symbols = this.checked.symbols;
@@ -118,8 +120,15 @@ export class LanguageSession {
       throw error;
     } finally {
       // A runtime failure may skip declarations. Never retain phantom bindings.
-      for (const name of this.symbols.bindings.keys())
+      for (const name of this.symbols.bindings.keys()) {
         if (!this.globals.values.has(name)) this.symbols.bindings.delete(name);
+        else if (
+          mode === 'terminal' &&
+          this.globals.values.get(name) === oldCells.get(name) &&
+          oldBindings.has(name)
+        )
+          this.symbols.bindings.set(name, oldBindings.get(name)!);
+      }
     }
   }
   private tick(at: Location) {
@@ -273,10 +282,28 @@ export class LanguageSession {
           // Types are checked before evaluation; comparisons share one static operand type.
           const x = a as number,
             y = b as number;
-          if (e.operator === '<') return x < y;
-          if (e.operator === '<=') return x <= y;
-          if (e.operator === '>') return x > y;
-          if (e.operator === '>=') return x >= y;
+          if (['<', '<=', '>', '>='].includes(e.operator)) {
+            let comparison: number;
+            if (typeof a === 'string' && typeof b === 'string') {
+              const left = Array.from(a, (c) => c.codePointAt(0)!),
+                right = Array.from(b, (c) => c.codePointAt(0)!);
+              comparison = 0;
+              for (let i = 0; i < Math.min(left.length, right.length); i++) {
+                if (left[i] !== right[i]) {
+                  comparison = left[i] - right[i];
+                  break;
+                }
+              }
+              if (comparison === 0) comparison = left.length - right.length;
+            } else comparison = x - y;
+            return e.operator === '<'
+              ? comparison < 0
+              : e.operator === '<='
+                ? comparison <= 0
+                : e.operator === '>'
+                  ? comparison > 0
+                  : comparison >= 0;
+          }
           if (e.operator === '+' && typeof a === 'string') return this.bounded(a + b, e.at);
           if ((e.operator === '/' || e.operator === '%') && y === 0)
             throw new Error('Division by zero.');

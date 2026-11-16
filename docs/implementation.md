@@ -1,71 +1,35 @@
 # Implementation notes
 
-The current game focuses on six file-investigation levels and four networking
-levels. `game-design.md` is the original design archive, not the current feature
-list. Simulations, time controls, thermal jobs, controllers, custom screens,
-startup command registrations, and the capability shop have been removed.
+## Shared execution
 
-## Progression
+The shell and saved .sc files use one Chevrotain grammar, static checker, interpreter, command registry, and value renderer. The interpreter depends only on LanguageHost (command metadata/invocation, workspace source reads, display), never GameEngine or mutable world state.
 
-`src/content/missions.ts` defines each level's concept, prerequisite, briefing,
-staged hints, and seeded evidence generator. `Campaign` manages discovery,
-completion, and best stars. Files-2 opens both files-3 and network-1. Ordinary
-completions unlock levels; extra automation stars never gate them. JavaScript
-language features and basic scripting are available immediately.
+Commands own signatures, usage/help, availability and execution. Game commands use CommandSystem. Native value commands live under src/commands/values and use the same interface; no separate function dispatcher exists. Native overloads are explicit and selected statically. Unknown or invalid source is rejected before execution; availability and game rules are checked again at invocation.
 
-One star means a correct answer by any method. Two stars use a player-submitted
-module against five fresh variations. Each case has a separate world, empty
-player data, and fresh QuickJS interpreters, while allowing imports from a fixed
-snapshot of the player's saved code. Verification starts at the entry host and
-leaves the explored world, connection, and personal data unchanged. Failures
-report a seed for a reproducible practice case; practice never awards stars.
-Complete reusable solvers live only under `tests/fixtures/`.
+Interactive bindings are ephemeral and survive submissions. A subsequent submission may replace a binding/function; duplicate declarations within a program are rejected. Script scopes start fresh. Imports resolve only within the personal /home notebook, load declarations once per execution, and reject cycles.
 
-## World and command boundary
+## Game environments
 
-`World.home` is a separate personal workspace; `World.hosts` contains only level
-vertices. A level connection stack begins at the entry host, without a hidden
-home connection. `exit` cannot escape the level; `mission leave` explicitly ends
-it. Terminal filesystem operations inspect the current machine. `edit`, `vim`,
-`run`, and imports use the player's code notebook under /home. Level evidence
-and script filesystem APIs are read-only. Discovery is explicit before remote
-script handles can be opened.
+Mission lifecycle state belongs to GameEngine/World/Campaign; execution state belongs to LanguageSession. An ordinary program can start a mission, inspect evidence, submit, leave, and start another without replacing its interpreter or resetting its budget. Navigation and completed effects persist after completion/failure, exactly as for pasted statements. No final whole-game challenge or retired upgrade shop is added.
 
-Commands own parsing, short/detailed help, availability, and execution under
-`src/commands/`. `CommandSystem` is their backend API; there is no engine command
-switch or separate help table. Script APIs use the same validated backend rules.
-QuickJS retains a 250 ms call limit, 32 MB heap, bounded stack/output and 10000
-API-call limit. Modules are disposed after each script execution.
+One star completes a level by any method. Five independent seeded cases verify the optional automation star. Each owns a fresh game/interpreter with a fixed snapshot of source files. Verification programs cannot replace/reset/leave the assigned case. Hints and second stars never gate progression. Complete solvers remain test fixtures only.
 
-## Persistence and transitions
+Home is outside the level graph. Filesystem commands inspect the active host; edit/vim/run/use access personal source. Evidence is read-only. neighbors explicitly discovers IDs; completion never discovers hosts.
 
-Save version 4 deliberately excludes terminal transcripts and readline history.
-Only the world, progression, personal data, and editor settings/drafts are saved.
-The decoder whitelists durable fields, including when reading older records.
-Older player files are preserved while retired mission state is discarded.
-Legacy supplied solver files are not silently deleted from existing workspaces.
+## Limits and regex
 
-Starting/resetting/leaving a level returns a clear-screen response and replaces
-the live terminal with the context introduction. Replacing xterm also drops its
-readline history. Reload synthesizes a new introduction; it does not replay old
-commands. The title and prompt/window accents distinguish purple level space
-from green home. The editor preserves the current level context and replaces
-the terminal until a keyboard exit action.
+Source is limited to 250,000 characters per file, 1,000,000 across imports and 50 import levels. Parsed delimiter nesting is bounded. Each execution has a 100,000-step budget, 2-second wall-clock deadline, 100-call function depth, bounded collection/string sizes, and a cumulative 32 MB allocation accounting budget. This is conservative accounting of produced values, not a JavaScript heap measurement. Output is bounded to 500 messages/80,000 characters. Runtime errors contain source locations and function frames.
 
-## Verification status
+Regex uses RE2JS (version locked in package-lock.json), not native JavaScript RegExp or a custom engine. Syntax follows https://github.com/google/re2/wiki/Syntax . match returns complete, non-overlapping matches. Pattern/input/match-count limits apply; backreferences and lookaround are unsupported. RE2JS project: https://github.com/le0pard/re2js .
 
-TypeScript checks pass. Regression coverage has been updated for the ten-level
-playthrough, branch choice, both star tiers, verification isolation and imports,
-practice seeds, read-only evidence, home isolation, clean transitions, editor
-drafts, migration and history-free persistence.
+## Workstation and saves
 
-The current automated suite could not start: Vite's esbuild subprocess fails with
-`spawn EPERM` under this sandbox. The preview server has the same restriction;
-the embedded browser reported connection refused. No permission was requested,
-and no current browser or test pass is claimed. A production build remains to be
-run with subprocess execution available. The checked-in tests and
-`player-guidance-review.md` describe the remaining checks.
+Readline uses the shared parser to continue incomplete statements and blocks. The worker supplies analysis and completion without executing game commands or saving. Monaco uses those services for diagnostics, types, signatures, references, and variable rename. The terminal has shared lexical highlighting and completion. Existing Vim and keyboard save/exit flows remain.
 
-Diagram/chart dependencies were removed. The existing DOMPurify override is
-retained because Monaco also depends on it. The lockfile was pruned without
-changing retained versions, then validated by an offline lockfile-only install.
+Version 4 saves contain world/progression/player data/settings, excluding output, history, variables and function registrations. Existing player files and drafts are preserved, including legacy .js files; only .sc files execute. A language-installation marker installs missing skeletons without overwriting user files. Old campaign saves retain durable files while retired progression is migrated.
+
+Starting/resetting/leaving a level clears terminal output/history and changes context styling. That UI transition does not reset language state. Reload starts a fresh REPL with a context introduction.
+
+## Validation
+
+Regression tests cover parsing/types/recursion/imports, regex, scope/limits, shared shell/script results, multiline input, completion without side effects, campaign-spanning execution, every level with fresh-case verification, verification isolation, editor flows, saves and migration. Build and test results are recorded in the migration log after running the final checks.

@@ -93,7 +93,8 @@ export class Shell {
       if (input.length > MAX_INPUT_LENGTH) throw new Error('Input exceeds 250 KB.');
       await this.language.execute(input);
     } catch (error) {
-      this.lines.push(error instanceof Error ? error.message : String(error));
+      this.effects.error = error instanceof Error ? error.message : String(error);
+      this.lines.push(this.effects.error);
     }
     return { ...this.effects, output: this.lines };
   }

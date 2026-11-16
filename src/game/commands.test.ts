@@ -35,17 +35,19 @@ it('keeps the command set focused and hides tools until relevant', async () => {
     expect((await game.execute(retired)).output.join()).toContain('Unknown command');
   game.campaign.start('files-1', 8);
   await game.execute('mission submit ' + createInstance('files-1', 8).answer);
-  expect((await game.execute('help run')).output.join()).toContain('main(ctx,args)');
+  expect((await game.execute('help run')).output.join()).toContain('fresh variable scope');
 });
 it.each([
   'mission list nonsense',
   'mission start',
   'mission hint extra',
   'mission submit --script',
-  'mission submit --script /home/solve.js NaN',
-  'mission submit --script /home/solve.js -1',
+  'mission submit --script /home/solve.sc NaN',
+  'mission submit --script /home/solve.sc -1',
   'mission leave extra',
 ])('rejects invalid command syntax: %s', async (command) => {
   const game = new GameEngine();
-  expect((await game.execute(command)).output.join()).toMatch(/Usage:|Seed must/);
+  expect((await game.execute(command)).output.join()).toMatch(
+    /Usage:|usage|Seed must|Expected number/,
+  );
 });

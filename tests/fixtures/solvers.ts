@@ -1,35 +1,4 @@
-/** Complete solvers are test fixtures, never installed into the player's workspace. */
-export const solver = `
-export function main(ctx) {
-  let release;
-  try { release=JSON.parse(ctx.fs.read('/deploy/current.json')).release; } catch {}
-  let answer;
-  function scan(fs,path='/') {
-    for(const entry of fs.list(path)) {
-      if(entry.type==='directory') scan(fs,entry.path);
-      else {
-        const text=fs.read(entry.path);
-        try {
-          const record=JSON.parse(text);
-          if(record.password && record.release===release) answer=record.password;
-        } catch {
-          if(text.includes('active=false')) continue;
-          const match=text.match(/password=([^\\s]+)/i);
-          if(match) answer=match[1];
-        }
-      }
-    }
-  }
-  if(ctx.mission.status.id.startsWith('network')) {
-    const visited=new Set();
-    function visit(id) {
-      if(visited.has(id)) return;
-      visited.add(id);
-      const host=ctx.network.connect(id);
-      scan(host.fs);
-      for(const next of host.neighbors()) visit(next);
-    }
-    visit(ctx.session.host);
-  } else scan(ctx.fs);
-  ctx.mission.submit(answer);
-}`;
+/** Complete solvers stay in tests and are never installed in player workspaces. */
+export const solverLibrary =
+  'type Release = {release: string}\ntype Credential = {release: string, password: string}\ntype Visit = {answer: string, visited: list<string>}\ndef active-release [] -> string {\n  for entry in (ls /) {\n    if $entry.name == "deploy" {\n      let current = (from-json<Release> (cat /deploy/current.json))\n      return $current.release\n    }\n  }\n  return ""\n}\ndef scan [path: string, release: string] -> string {\n  for entry in (ls $path) {\n    if $entry.type == "directory" {\n      let found = (scan $entry.path $release)\n      if $found != "" { return $found }\n    } else {\n      let text = (cat $entry.path)\n      if (contains $entry.path "/credentials/") {\n        let credential = (from-json<Credential> $text)\n        if $credential.release == $release { return $credential.password }\n      } else {\n        if not (contains $text "active=false") {\n          for line in (split "\\n" $text) {\n            let parts = (split "=" $line)\n            if (count $parts) == 2 {\n              if $parts[0] == "PASSWORD" or $parts[0] == "password" {\n                return (trim $parts[1])\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n  return ""\n}\ndef visit [seen: list<string>, release: string] -> Visit {\n  let id = (hostname)\n  if (contains $seen $id) { return {answer: "", visited: $seen} }\n  mut visited = (append $seen $id)\n  let answer = (scan / $release)\n  if $answer != "" { return {answer: $answer, visited: $visited} }\n  for next in (neighbors) {\n    if not (contains $visited $next) {\n      ssh $next\n      let result = (visit $visited $release)\n      exit\n      $visited = $result.visited\n      if $result.answer != "" { return $result }\n    }\n  }\n  return {answer: "", visited: $visited}\n}\ndef solve [] -> void {\n  let release = (active-release)\n  let status = (mission status)\n  if (contains $status.id "network") {\n    let result = (visit [] $release)\n    mission submit $result.answer\n  } else {\n    mission submit (scan / $release)\n  }\n}\n';
+export const solver = solverLibrary + '\nsolve\n';

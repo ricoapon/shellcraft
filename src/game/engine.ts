@@ -10,12 +10,13 @@ import type { WorldSnapshot } from './world';
 import { Campaign, freshProgress } from './campaign';
 import type { Progress } from './campaign';
 import { missions } from '../content/missions';
-import { installHomeFiles } from '../content/home';
+import { installHomeFiles, starterSource } from '../content/home';
 import { welcomeMessage } from '../content/player-support';
 export interface WorkstationSettings {
   vim: boolean;
   editor?: { path: string; draft: string; saved?: string; line?: number };
   examplesInstalled?: boolean;
+  languageInstalled?: boolean;
 }
 /** Terminal output and readline history deliberately have no place in a save. */
 export interface EngineSnapshot {
@@ -24,6 +25,7 @@ export interface EngineSnapshot {
   settings: WorkstationSettings;
 }
 export interface EngineReply {
+  error?: string;
   output: readonly string[];
   clearScreen?: true;
   host: string;
@@ -44,13 +46,17 @@ export class GameEngine {
   private readonly terminal: Shell;
   shell: ShellState = { entries: [] };
   private output: string[] = [];
-  constructor(snapshot?: EngineSnapshot) {
+  constructor(
+    snapshot?: EngineSnapshot,
+    private readonly verification = false,
+  ) {
     this.world = new World(undefined, snapshot?.world);
     this.campaign = new Campaign(this.world, snapshot?.progress ?? freshProgress());
     this.settings = snapshot?.settings ?? { vim: false };
-    if (!this.settings.examplesInstalled) {
+    if (!this.settings.languageInstalled) {
       installHomeFiles(this.world.home.filesystem);
       this.settings.examplesInstalled = true;
+      this.settings.languageInstalled = true;
     }
     if (this.settings.editor) {
       const file = this.settings.editor;
@@ -85,17 +91,21 @@ export class GameEngine {
   }
   async execute(input: string): Promise<EngineReply> {
     this.output = [];
-    let clearScreen: true | undefined, action: EngineReply['action'];
+    let clearScreen: true | undefined,
+      action: EngineReply['action'],
+      errorMessage: string | undefined;
     const host = this.world.host.id,
       directory = this.world.session.workingDirectory;
     if (!input.trim()) return { output: [], host, directory };
     try {
       const result = await this.terminal.submit(input);
       clearScreen = result.clearScreen;
+      errorMessage = result.error;
       action = result.action;
       for (const line of result.output ?? []) this.print(line);
     } catch (error) {
-      this.output.push(error instanceof Error ? error.message : String(error));
+      errorMessage = error instanceof Error ? error.message : String(error);
+      this.output.push(errorMessage);
     }
     const entry = {
       input: input.slice(0, 250000),
@@ -119,6 +129,7 @@ export class GameEngine {
     };
     return {
       output: this.output,
+      ...(errorMessage ? { error: errorMessage } : {}),
       clearScreen,
       host: this.world.host.id,
       directory: this.world.session.workingDirectory,
@@ -167,9 +178,18 @@ export class GameEngine {
               available: this.campaign.available(m.id),
               prerequisite: m.prerequisite,
             })),
-        start: (id) => this.campaign.start(id),
-        reset: () => this.campaign.start(this.campaign.active.id),
-        leave: () => this.campaign.leave(),
+        start: (id) => {
+          this.requireMissionLifecycle();
+          return this.campaign.start(id);
+        },
+        reset: () => {
+          this.requireMissionLifecycle();
+          return this.campaign.start(this.campaign.active.id);
+        },
+        leave: () => {
+          this.requireMissionLifecycle();
+          return this.campaign.leave();
+        },
         briefing: () => (this.campaign.definition ? this.campaign.banner() : welcomeMessage()),
         hint: () => this.campaign.hint(),
         status: () => ({
@@ -183,6 +203,10 @@ export class GameEngine {
       editor: { open: (path, vim) => this.openEditor(path, undefined, vim) },
       scripts: { run: (path, args) => this.run(path, [...args]) },
     };
+  }
+  private requireMissionLifecycle() {
+    if (this.verification)
+      throw new Error('Cannot replace or leave the assigned verification mission.');
   }
   private homePath(path: string) {
     const absolute = resolvePath(path, '/home');
@@ -204,9 +228,7 @@ export class GameEngine {
     const saved = exists ? fs.readFile(absolute) : undefined;
     this.settings.editor = {
       path: absolute,
-      draft:
-        saved ??
-        'export function main(ctx, args) {\n  // Read the evidence and submit your result here.\n}\n',
+      draft: saved ?? starterSource,
       saved,
       line,
     };
@@ -243,15 +265,22 @@ export class GameEngine {
         ? Array.from({ length: 5 }, () => crypto.getRandomValues(new Uint32Array(1))[0])
         : [practiceSeed];
     for (let i = 0; i < seeds.length; i++) {
-      const trial = new GameEngine({
-        world: { home: source, hosts: [], connections: [] },
-        progress: { ...freshProgress(), completed: [...this.campaign.progress.completed] },
-        settings: { vim: false, examplesInstalled: true },
-      });
+      const trial = new GameEngine(
+        {
+          world: { home: source, hosts: [], connections: [] },
+          progress: { ...freshProgress(), completed: [...this.campaign.progress.completed] },
+          settings: { vim: false, examplesInstalled: true, languageInstalled: true },
+        },
+        true,
+      );
       try {
         trial.campaign.start(id, seeds[i]);
         await trial.run(path);
-        if (trial.campaign.active.status !== 'complete')
+        if (
+          trial.campaign.active.id !== id ||
+          trial.campaign.active.seed !== seeds[i] ||
+          trial.campaign.active.status !== 'complete'
+        )
           throw new Error('The program finished without submitting the correct password.');
       } catch (error) {
         return [

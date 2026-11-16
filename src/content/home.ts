@@ -1,32 +1,36 @@
 import type { VirtualFileSystem } from '../core/filesystem';
+export const starterSource = '# Read the evidence and submit your result here.\n';
 export const homeFiles: Record<string, string> = {
-  '/home/README.md': `# Your code workspace
+  '/home/README.md': `# Your Shellcraft workspace
 
-Choose a level with mission. Files and stars are saved; terminal output is temporary.
-Starting a level connects to its entry machine. Home is outside every level network.
-Your personal code travels with you: edit, vim, and run always open /home source files.
-The scripts read evidence from the level through ctx.fs, not from the code workspace.
+Start with mission start files-1. Use ls and cat to inspect evidence.
+The shell and .sc files use exactly the same language. Try guide scripts.
+Save your program with edit /home/solve.sc, then run /home/solve.sc.
+One star means solved by any method. mission submit --script /home/solve.sc
+verifies fresh cases for the optional second star. Hints never reduce stars.
 
-Begin with mission start files-1. Scripting is available immediately; networking opens after files-2.
-Use guide scripts for tiny examples, mission hint for staged clues, and help <command> for syntax.
-No complete solvers are supplied. Build tools you can keep improving.
+Inside a level, filesystem commands refer to the connected host.
+edit, vim, run, and use refer to your personal /home source notebook.
+exit returns to the previous host; mission leave returns to the workspace.
+Scripts may start and leave missions, keeping their own variables and functions.
 
-One star: solve by any method. Two stars: mission submit --script /home/solve.js
-verifies your program on five fresh instances. Its main(ctx,args) should call
-ctx.mission.submit(value). Verification ignores cached player data and preserves your explored instance.
-
-edit: Ctrl+S saves/exits, Ctrl+Q discards/exits, Ctrl+Enter saves/exits/runs.
-vim: :w saves, :q quits, :q! discards, :wq or :x saves/quits, :run saves/quits/runs.
+Normal editor: Ctrl+S saves/exits, Ctrl+Q discards, Ctrl+Enter saves/exits/runs.
+Vim: :w, :q, :q!, :wq/:x, :run.
+Terminal blocks can span lines; Tab completes commands, values, paths, and known hosts.
+Files and progress are saved. Terminal output, history, and variables are temporary.
 `,
-  '/home/solve.js':
-    'export function main(ctx, args) {\n  // Read the evidence and submit your result here.\n}\n',
+  '/home/solve.sc': starterSource,
+  '/home/example.sc':
+    '# Individual operations, not a mission solver.\nlet text = "release=r42"\necho (split "=" $text)\necho (match \'[0-9]+\' $text)\n',
 };
 export function installHomeFiles(filesystem: VirtualFileSystem) {
   for (const [path, text] of Object.entries(homeFiles)) {
     try {
       filesystem.stat(path);
+      continue;
     } catch {
-      filesystem.writeFile(path, text);
+      /* Install only missing files. */
     }
+    filesystem.writeFile(path, text);
   }
 }

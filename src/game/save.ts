@@ -23,6 +23,7 @@ function settings(value: unknown): WorkstationSettings {
   const result: WorkstationSettings = {
     vim: value.vim,
     examplesInstalled: value.examplesInstalled === true,
+    languageInstalled: value.languageInstalled === true,
   };
   if (value.editor !== undefined) {
     const file = value.editor;

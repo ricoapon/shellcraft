@@ -12,7 +12,7 @@ import { clear } from './clear';
 import { help } from './help';
 import { filesystemCommands } from './filesystem';
 import type { Command } from './command';
-import { stringCommands } from './strings';
+import { valueCommands } from './values';
 import { hostname } from './hostname';
 export const builtinCommands: readonly Command[] = [
   guide,
@@ -29,5 +29,5 @@ export const builtinCommands: readonly Command[] = [
   help,
   ...filesystemCommands,
   hostname,
-  ...stringCommands,
+  ...valueCommands,
 ];

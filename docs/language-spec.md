@@ -23,7 +23,7 @@ echo $first.path
 ```
 
 - Names are case-sensitive. Variable, parameter, field, and type names match `[A-Za-z_][A-Za-z0-9_]*`; command names additionally permit `-` after the first character.
-- `#` starts a comment outside strings. Keywords cannot be used as names.
+- `#` starts a comment outside strings. Keywords cannot be used as variable, parameter, type, or command names; they may be used as record field names.
 - Command calls use `name argument ...`; built-in subcommands use fixed names such as `mission submit`.
 - Value operations are ordinary commands available identically in the terminal and scripts: `contains "hello world" "world"`, `split "=" "password=secret"`. Dot notation accesses record fields only; method calls such as `$text.split("=")` are unsupported.
 - In command arguments, bare words and paths are string literals. Numeric literals, `true`, `false`, `$variables`, lists, and records retain their types. Quote a word to force a string, such as `"true"`.
@@ -34,14 +34,14 @@ echo $first.path
 
 ## Types
 
-| Type | Values |
-| --- | --- |
-| `string` | Unicode text |
-| `number` | Finite IEEE 754 double-precision numbers |
-| `bool` | `true` or `false` |
-| `list<T>` | Ordered, homogeneous values |
-| `{field: T, ...}` | Records with statically known fields |
-| `void` | No result; cannot be stored or passed as an argument |
+| Type              | Values                                               |
+| ----------------- | ---------------------------------------------------- |
+| `string`          | Unicode text                                         |
+| `number`          | Finite IEEE 754 double-precision numbers             |
+| `bool`            | `true` or `false`                                    |
+| `list<T>`         | Ordered, homogeneous values                          |
+| `{field: T, ...}` | Records with statically known fields                 |
+| `void`            | No result; cannot be stored or passed as an argument |
 
 Typing is static. Local declarations and loop variables infer their types; optional annotations must agree. Types never change through assignment. There are no implicit conversions, `any`, null values, classes, methods, inheritance, or user-defined generic types/functions.
 
@@ -56,19 +56,19 @@ type Credential = {release: string, password: string}
 - Lists and records are immutable values. Updating a collection means assigning a replacement value to a mutable binding.
 - Empty lists require an expected element type from an annotation, argument, or return signature.
 - Record compatibility is structural: every required field must exist with a compatible type; additional fields are allowed. `type Name = ...` declares a top-level alias.
-- Blocks have lexical scope. Bindings/parameters, types, and commands have separate namespaces. Redeclaring or shadowing a visible name within its namespace is an error.
+- Blocks have lexical scope. Bindings/parameters, types, and commands have separate namespaces. Redeclaring or shadowing a visible name within a program is an error. A later terminal submission may replace a top-level binding, type alias, or function; existing functions are rechecked against replacement signatures.
 
 ## Expressions
 
-| Precedence, highest first | Operators |
-| --- | --- |
-| Access | `$file.path`, `$files[0]` |
-| Unary | `not`, `-` |
-| Multiplicative | `*`, `/`, `%` |
-| Additive | `+`, `-` |
-| Comparison | `<`, `<=`, `>`, `>=` |
-| Equality | `==`, `!=` |
-| Boolean | `and`, then `or` |
+| Precedence, highest first | Operators                 |
+| ------------------------- | ------------------------- |
+| Access                    | `$file.path`, `$files[0]` |
+| Unary                     | `not`, `-`                |
+| Multiplicative            | `*`, `/`, `%`             |
+| Additive                  | `+`, `-`                  |
+| Comparison                | `<`, `<=`, `>`, `>=`      |
+| Equality                  | `==`, `!=`                |
+| Boolean                   | `and`, then `or`          |
 
 - Binary operators associate left to right. Comparison and equality operators cannot be chained without parentheses.
 - Arithmetic accepts numbers; `+` also concatenates two strings. Comparisons accept numbers or strings of the same type; string ordering is lexicographic by Unicode code point.
@@ -142,33 +142,33 @@ type File = {name: string, path: string, type: string}
 
 `File.type` is either `"file"` or `"directory"`; `File.path` is absolute on the current host.
 
-| Signature | Behavior |
-| --- | --- |
-| `pwd -> string` | Current directory. |
-| `cd path: string -> void` | Change directory on the current host. |
-| `ls path?: string -> list<File>` | Immediate children, sorted by name; defaults to `"."`. Includes dotfiles. A file path returns a one-element list. |
-| `cat path: string -> string` | Read a file's complete text. |
-| `write path: string text: string -> void` | Create or replace a writable file; parent must exist. |
-| `mkdir path: string -> void` | Create one directory; parent must exist. |
-| `rm path: string -> void` | Remove one writable file; directories are rejected. |
-| `split separator: string text: string -> list<string>` | Split text by a nonempty literal separator; retain empty parts. |
-| `join separator: string values: list<string> -> string` | Join strings. |
-| `trim text: string -> string` | Remove leading/trailing Unicode whitespace. |
-| `replace old: string new: string text: string -> string` | Replace all non-overlapping literal occurrences; `old` must be nonempty. |
+| Signature                                                | Behavior                                                                                                                                                                         |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pwd -> string`                                          | Current directory.                                                                                                                                                               |
+| `cd path: string -> void`                                | Change directory on the current host.                                                                                                                                            |
+| `ls path?: string -> list<File>`                         | Immediate children, sorted by name; defaults to `"."`. Includes dotfiles. A file path returns a one-element list.                                                                |
+| `cat path: string -> string`                             | Read a file's complete text.                                                                                                                                                     |
+| `write path: string text: string -> void`                | Create or replace a writable file; parent must exist.                                                                                                                            |
+| `mkdir path: string -> void`                             | Create one directory; parent must exist.                                                                                                                                         |
+| `rm path: string -> void`                                | Remove one writable file; directories are rejected.                                                                                                                              |
+| `split separator: string text: string -> list<string>`   | Split text by a nonempty literal separator; retain empty parts.                                                                                                                  |
+| `join separator: string values: list<string> -> string`  | Join strings.                                                                                                                                                                    |
+| `trim text: string -> string`                            | Remove leading/trailing Unicode whitespace.                                                                                                                                      |
+| `replace old: string new: string text: string -> string` | Replace all non-overlapping literal occurrences; `old` must be nonempty.                                                                                                         |
 | `slice start: number end: number text: string -> string` | Substring from inclusive `start` to exclusive `end`, measured in Unicode code points. Bounds must be integers with `0 <= start <= end <= count text`; otherwise a runtime error. |
-| `match pattern: string text: string -> list<string>` | Return full, non-overlapping regex matches in source order; no matches returns `[]`. |
-| `contains value: string part: string -> bool` | Test literal substring membership. |
-| `contains values: list<T> value: T -> bool` | Test structural list membership. |
-| `append values: list<T> value: T -> list<T>` | Return a list with one additional element. |
-| `count value: string -> number` | Number of Unicode code points. |
-| `count values: list<T> -> number` | Number of elements. |
-| `echo value: T -> void` | Display a value without changing its type or returning it. |
-| `from-json<T> text: string -> T` | Parse and validate JSON against an explicit static type. |
-| `hostname -> string` | Current host ID. |
-| `neighbors host?: string -> list<string>` | Discover adjacent host IDs, sorted lexicographically; defaults to current host. |
-| `ssh host: string -> void` | Connect to a discovered adjacent host. |
-| `exit -> void` | Restore the preceding connection and its working directory. |
-| `mission submit answer: string -> bool` | Check an answer; return success and award ordinary completion when correct. |
+| `match pattern: string text: string -> list<string>`     | Return full, non-overlapping regex matches in source order; no matches returns `[]`.                                                                                             |
+| `contains value: string part: string -> bool`            | Test literal substring membership.                                                                                                                                               |
+| `contains values: list<T> value: T -> bool`              | Test structural list membership.                                                                                                                                                 |
+| `append values: list<T> value: T -> list<T>`             | Return a list with one additional element.                                                                                                                                       |
+| `count value: string -> number`                          | Number of Unicode code points.                                                                                                                                                   |
+| `count values: list<T> -> number`                        | Number of elements.                                                                                                                                                              |
+| `echo value: T -> void`                                  | Display a value without changing its type or returning it.                                                                                                                       |
+| `from-json<T> text: string -> T`                         | Parse and validate JSON against an explicit static type.                                                                                                                         |
+| `hostname -> string`                                     | Current host ID.                                                                                                                                                                 |
+| `neighbors host?: string -> list<string>`                | Discover adjacent host IDs, sorted lexicographically; defaults to current host.                                                                                                  |
+| `ssh host: string -> void`                               | Connect to a discovered adjacent host.                                                                                                                                           |
+| `exit -> void`                                           | Restore the preceding connection and its working directory.                                                                                                                      |
+| `mission submit answer: string -> bool`                  | Check an answer; return success and award ordinary completion when correct.                                                                                                      |
 
 ### String and list operations
 
@@ -183,7 +183,7 @@ let numbers = (match '[0-9]+' "release=r42 build=17")
 # numbers is ["42", "17"]
 ```
 
-Regex patterns are strings. The engine is **RE2JS** (the installed version is pinned in `package-lock.json`), using [RE2 syntax](https://github.com/google/re2/wiki/Syntax); see the [RE2JS project](https://github.com/le0pard/re2js). Supported syntax includes literals, escaped metacharacters, `.`, character classes/ranges and negation, grouping `(...)`, alternation `|`, greedy repetition `?`, `*`, `+`, `{n}`, `{n,}`, `{n,m}`, and anchors `^`/`$`. Matching is case-sensitive, leftmost-first; alternatives are tried in written order. `.` excludes CR/LF; anchors refer to the complete input's start/end. Patterns expose full matches only, without capture-group results. RE2 lazy quantifiers and inline flags are supported. Lookaround and backreferences are unsupported by the engine.
+Regex patterns are strings. The engine is **RE2JS** (the installed version is pinned in `package-lock.json`), using [RE2 syntax](https://github.com/google/re2/wiki/Syntax); see the [RE2JS project](https://github.com/le0pard/re2js). Supported syntax includes literals, escaped metacharacters, `.`, character classes/ranges and negation, grouping `(...)`, alternation `|`, greedy repetition `?`, `*`, `+`, `{n}`, `{n,}`, `{n,m}`, and anchors `^`/`$`. Matching is case-sensitive, leftmost-first; alternatives are tried in written order. `.` excludes LF by default; anchors refer to the complete input's start/end. Patterns expose full matches only, without capture-group results. RE2 lazy quantifiers and inline flags are supported. Lookaround and backreferences are unsupported by the engine.
 
 Patterns are limited to 256 characters and inputs to 250,000 characters; results are limited to 10,000 matches. Invalid or unsupported patterns are runtime errors. After a zero-length match, matching advances by one Unicode code point; a match at the end is returned at most once. Regex execution is bounded by the game's execution limits. In particular, regex alternation inside a pattern string does not introduce a language pipe operator.
 
@@ -212,7 +212,7 @@ echo $current.release
 
 - `run /home/tool.sc argument ...` executes a source file; arguments must be strings and populate `$args`. `run` returns `void`; use imported functions for returned values.
 - `edit`, `vim`, `run`, and `use` resolve source files in the personal workspace, including while connected to a level. They do not redirect filesystem commands to home.
-- `mission submit --script /home/solve.sc [seed]` verifies a script on fresh cases. Each case has fresh variables, navigation, and discoveries; the script must call `mission submit` successfully without intervention. Full verification may award the optional automation star; a supplied seed runs one practice case.
+- `mission submit --script /home/solve.sc [seed]` verifies a script on fresh cases. Each case has fresh variables, navigation, and discoveries; the script must call `mission submit` successfully without intervention. Full verification may award the optional automation star; a supplied seed runs one practice case. Verification programs cannot start, reset, or leave missions; ordinary programs can.
 - Mission selection, reset, briefing, status, hints, and leaving are available to scripts through the same commands as the terminal. Script verification, editor, clearing, and save commands are terminal-only; scripts cannot invoke them or `run`. These restrictions concern UI/reentrant operations, not campaign progression.
 - `help` includes available built-ins and terminal-defined/imported functions with their signatures. `help <command>` shows detailed usage. Availability rules apply equally to execution and help.
 

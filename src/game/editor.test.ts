@@ -6,14 +6,14 @@ it('keeps new files as recoverable drafts until explicitly saved', async () => {
   const game = new GameEngine();
   let restored: GameEngine | undefined;
   try {
-    await game.execute('edit /home/draft.js');
+    await game.execute('edit /home/draft.sc');
     game.settings.editor!.draft = 'unsaved draft';
-    expect(() => game.world.home.filesystem.readFile('/home/draft.js')).toThrow('Path not found');
+    expect(() => game.world.home.filesystem.readFile('/home/draft.sc')).toThrow('Path not found');
     restored = new GameEngine(validateGameSave(game.snapshot()));
     expect(restored.settings.editor?.draft).toBe('unsaved draft');
     await restored.closeEditor('discard');
     expect(restored.settings.editor).toBeUndefined();
-    expect(() => restored!.world.home.filesystem.readFile('/home/draft.js')).toThrow(
+    expect(() => restored!.world.home.filesystem.readFile('/home/draft.sc')).toThrow(
       'Path not found',
     );
   } finally {
@@ -50,8 +50,8 @@ it('saves, closes, and runs the new source exactly once', async () => {
   try {
     game.campaign.progress.completed = ['files-1'];
     game.campaign.progress.stars = { 'files-1': 1 };
-    await game.execute('edit "/home/my script.mjs"');
-    await game.closeEditor('run', 'export function main(ctx) { ctx.print("new-source-ran"); }');
+    await game.execute('edit "/home/my script.sc"');
+    await game.closeEditor('run', 'echo "new-source-ran"');
     expect(game.settings.editor).toBeUndefined();
     expect(game.shell.entries.at(-1)?.output.join()).toContain('new-source-ran');
     expect(game.shell.entries.filter((entry) => entry.input.startsWith('run '))).toHaveLength(1);
@@ -63,14 +63,14 @@ it('saves, closes, and runs the new source exactly once', async () => {
 it('selects normal or Vim editing explicitly and preserves source on failed saves', async () => {
   const game = new GameEngine();
   try {
-    await game.execute('vim /home/note.js');
+    await game.execute('vim /home/note.sc');
     expect(game.settings.vim).toBe(true);
     await game.closeEditor('save', 'original');
-    await game.execute('edit /home/note.js');
+    await game.execute('edit /home/note.sc');
     expect(game.settings.vim).toBe(false);
     await expect(game.closeEditor('save', 'x'.repeat(250001))).rejects.toThrow('250 KB');
-    expect(game.settings.editor?.path).toBe('/home/note.js');
-    expect(game.world.home.filesystem.readFile('/home/note.js')).toBe('original');
+    expect(game.settings.editor?.path).toBe('/home/note.sc');
+    expect(game.world.home.filesystem.readFile('/home/note.sc')).toBe('original');
     await game.closeEditor('discard');
     game.world.home.filesystem.mkdir('/home/scripts');
     expect(() => game.openEditor('/home/scripts')).toThrow('Is a directory');

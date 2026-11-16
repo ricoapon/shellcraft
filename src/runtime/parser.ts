@@ -245,6 +245,14 @@ export class ShellcraftParser extends EmbeddedActionsParser {
       return t.image;
     });
   });
+  fieldName = this.RULE('fieldName', () => {
+    const t = this.CONSUME(Word);
+    return this.ACTION(() => {
+      if (!/^[A-Za-z_]\w*$/.test(t.image))
+        throw new LanguageError(loc(t, this.filename), 'Expected a field name.');
+      return t.image;
+    });
+  });
   type = this.RULE('type', (): TypeNode => {
     const at = this.ACTION(() => this.at());
     let result: TypeNode;
@@ -255,7 +263,7 @@ export class ShellcraftParser extends EmbeddedActionsParser {
           this.SUBRULE(this.separators);
           const fields: Record<string, TypeNode> = Object.create(null);
           this.OPTION(() => {
-            const name = this.SUBRULE(this.identifier);
+            const name = this.SUBRULE(this.fieldName);
             this.CONSUME(Colon);
             const type = this.SUBRULE(this.type);
             this.ACTION(() => {
@@ -266,7 +274,7 @@ export class ShellcraftParser extends EmbeddedActionsParser {
               this.CONSUME(Comma);
               this.SUBRULE3(this.separators);
               this.OPTION2(() => {
-                const key = this.SUBRULE2(this.identifier);
+                const key = this.SUBRULE2(this.fieldName);
                 this.CONSUME2(Colon);
                 const value = this.SUBRULE2(this.type);
                 this.ACTION(() => {
@@ -667,7 +675,7 @@ export class ShellcraftParser extends EmbeddedActionsParser {
           this.SUBRULE(this.separators);
           const fields: Record<string, Expr> = Object.create(null);
           this.OPTION3(() => {
-            const name = this.SUBRULE(this.identifier);
+            const name = this.SUBRULE(this.fieldName);
             this.CONSUME(Colon);
             const expr = this.SUBRULE4(this.expression);
             this.ACTION(() => {
@@ -678,7 +686,7 @@ export class ShellcraftParser extends EmbeddedActionsParser {
               this.CONSUME2(Comma);
               this.SUBRULE3(this.separators);
               this.OPTION4(() => {
-                const name = this.SUBRULE2(this.identifier);
+                const name = this.SUBRULE2(this.fieldName);
                 this.CONSUME2(Colon);
                 const expr = this.SUBRULE5(this.expression);
                 this.ACTION(() => {

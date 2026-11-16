@@ -22,6 +22,7 @@ export function formatValue(value: Value): string {
     }
     return value.map(formatValue).join('\n');
   }
+  if (typeof value === 'object' && Object.keys(value).length === 0) return '{}';
   if (typeof value === 'object')
     return Object.entries(value)
       .map(([k, v]) => `${k}: ${formatValue(v)}`)

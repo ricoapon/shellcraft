@@ -1,7 +1,6 @@
 # Shellcraft
 
-A terminal programming puzzle game about investigating files and networks and
-building your own reusable tools.
+A terminal programming puzzle game about investigating files and networks and building reusable tools.
 
 ## Run
 
@@ -12,61 +11,46 @@ npm ci
 npm run dev
 ```
 
-Begin with `mission start files-1`. `mission` lists available levels and stars;
-`guide start` explains navigation. Six file levels develop search, traversal,
-filtering, and references. After files-2, a four-level networking branch opens,
-so you can continue files or explore another concept.
+Start with `mission start files-1`. Six file levels teach traversal, filtering, and references. After files-2, a four-level network branch opens. One star means solved by any method; `mission submit --script /home/solve.sc` verifies five fresh cases for the optional second star. Hints and automation stars never block ordinary progression.
 
-Each level can be solved manually, with scripts, or a combination:
+## One language, shell and scripts
 
-- One star: solve the objective by any method.
-- Two stars: `mission submit --script /home/solve.js` verifies your program on
-  five fresh instances without intervention. Extra stars never gate progression.
+The prompt and saved `.sc` files use the same statically typed language:
 
-Hints are staged and free. Complete solvers are not installed in your workspace.
-Scripting is available immediately; the levels introduce its uses gradually.
+```text
+let files = (ls /notes)
+for file in $files {
+  echo $file.name
+}
+```
 
-## Workspace and levels
+Commands return structured values. Uncaptured values are rendered; assignment and nested calls preserve their types. Variables infer types; functions require typed signatures. String/list operations are ordinary commands, not methods. There are no pipes or JavaScript execution.
 
-Starting a level clears the terminal, connects to its entry host, and changes the
-window title and accent to purple. `mission leave` clears it again and returns to
-the green personal workspace. `exit` moves back within a level's connections.
-Home is outside level networks.
+Use `edit /home/solve.sc`, then `run /home/solve.sc`. `use /home/lib.sc` imports declaration-only libraries. Interactive variables/functions persist in memory; each script gets a fresh scope. Scripts may start and leave missions without losing their own execution state. Ordinary navigation persists exactly as it does manually.
 
-Your personal code notebook travels with you. `edit`, `vim`, `run`, and imports
-always use `/home` source files. Terminal file commands and `ctx.fs` inspect the
-current machine. Use `guide scripts`, `guide network`, or `guide automation` for
-small examples and the verification rules.
+The editor provides highlighting, completion, diagnostics, hover, signatures, variable rename and definition links. Normal editing uses Ctrl+S to save/exit, Ctrl+Q to discard, Ctrl+Enter to save/exit/run. Vim uses :w, :q, :q!, :wq/:x and :run. The terminal supports multiline input, syntax highlighting, and Tab completion.
 
-The editor replaces the terminal. `edit` uses Ctrl+S to save/exit, Ctrl+Q to
-discard/exit, and Ctrl+Enter to save/exit/run. `vim` uses :w, :q, :q!, :wq/:x and
-custom :run. New files are drafts until explicitly saved.
+See [language specification](docs/language-spec.md) and `guide` for syntax and small examples.
 
-## Persistence
+## Workspace and persistence
 
-IndexedDB saves files, stars, personal script data, the active level, and editor
-drafts. Terminal output and command history are never persisted. Reload starts
-with a fresh introduction to the current context. `save export` and `save import`
-provide JSON backups (version 4). Version 3 saves retain player files and personal
-data while replacing the retired campaign progression. Legacy starter files are
-preserved; new workspaces receive a blank solve.js. Use one tab per origin.
+Filesystem commands operate on the current host; `edit`, `vim`, `run`, and `use` access your personal /home notebook. Level evidence is read-only. Home is outside level networks. `exit` returns to the previous level connection; `mission leave` returns home.
 
-## Structure
+IndexedDB saves files, stars, the active level, and editor drafts. Terminal output, history, and interpreter bindings are never saved. Use one tab per origin and `save export/import` for backups. Existing player files, including legacy JavaScript, are preserved; missing .sc skeletons are installed without overwriting files.
 
-- `src/core/`: virtual filesystem, navigation, parser, and ephemeral shell.
-- `src/commands/`: commands, registry, help metadata, and typed backend boundary.
-- `src/content/`: level rules, seeded instances, guide, and starter skeleton.
-- `src/game/`: progression, isolated verification, world, worker, and saves.
-- `src/runtime/`: bounded QuickJS execution of player modules.
-- `src/ui/`: xterm, Monaco, and optional Vim editing.
-- `tests/fixtures/`: complete solvers used only by automated tests.
-- `docs/`: implementation notes, playtest checklist, and original design archive.
+## Implementation
 
-Node.js runs development tools; there is no application server. All networks and
-files are simulated. Player scripts have no browser, Node, real network, timers,
-or npm access. See `guide api` for execution limits.
+- `src/runtime/`: Chevrotain grammar, type checker, bounded interpreter, shared language tools and value renderer.
+- `src/commands/`: game commands, one registry, and the `CommandSystem` backend boundary.
+- `src/commands/values/`: native string/list/JSON commands, registered through the same interface.
+- `src/core/`: virtual filesystem, navigation, and persistent-in-memory REPL.
+- `src/game/`: levels, verification environments, worker, and saves.
+- `src/ui/`: xterm and Monaco/Vim workstation.
+- `tests/fixtures/`: complete solvers, never installed in player workspaces.
 
-## Development checks
+Regex matching uses **[RE2JS](https://github.com/le0pard/re2js)** with [RE2 syntax](https://github.com/google/re2/wiki/Syntax). Package versions are locked in package-lock.json. The game has no application server; player programs cannot access real files, networks, browser/Node globals, or npm packages.
+
+## Checks
 
 ```sh
 npm test
@@ -75,6 +59,4 @@ npm run build
 npm run format:check
 ```
 
-`npm run make:showcase` generates `examples/showcase-save.json`, an optional
-checkpoint with the network branch available and no pre-written solvers. It does
-not change browser storage. Export your current save before importing a sample.
+`npm run make:showcase` writes an optional example save with networking available and no complete solvers.

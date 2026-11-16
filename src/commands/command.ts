@@ -2,6 +2,7 @@ import type { CommandSystem } from './system';
 import type { NativeCommand, Type, Value } from '../runtime/types';
 import { nothing, string } from '../runtime/types';
 export interface CommandResult {
+  error?: string;
   value?: Value;
   output?: readonly string[];
   clearScreen?: true;

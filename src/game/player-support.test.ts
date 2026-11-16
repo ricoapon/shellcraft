@@ -10,7 +10,7 @@ it('gives staged hints without taking away a future automation star', async () =
 });
 it('offers guide topics and detailed command help without supplying a solver', async () => {
   const game = new GameEngine();
-  expect((await game.execute('guide scripts')).output.join()).toContain('individual operations');
-  expect((await game.execute('help mission')).output.join()).toContain('fresh instances');
+  expect((await game.execute('guide scripts')).output.join()).toContain('small examples');
+  expect((await game.execute('help mission')).output.join()).toContain('fresh cases');
   expect((await game.execute('guide recovery')).output.join()).toContain('never saved');
 });

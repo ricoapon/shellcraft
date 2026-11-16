@@ -10,7 +10,6 @@
     "dexie": "^4.4.7",
     "monaco-editor": "^0.56.0",
     "monaco-vim": "^0.4.4",
-    "quickjs-emscripten": "^0.32.0",
     "re2js": "^2.10.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

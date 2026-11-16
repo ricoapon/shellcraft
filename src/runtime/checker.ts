@@ -298,10 +298,23 @@ export class Checker {
     const explicit = e.typeArgument ? this.resolve(e.typeArgument) : undefined;
     if (explicit && this.hasVoid(explicit)) this.error(e, 'A type argument cannot contain void.');
     const failures: string[] = [];
+    const specificity = Math.max(
+      0,
+      ...signatures
+        .filter((s) =>
+          (s.prefix ?? []).every(
+            (word, i) =>
+              e.args[i]?.kind === 'literal' &&
+              (e.args[i] as Extract<Expr, { kind: 'literal' }>).value === word,
+          ),
+        )
+        .map((s) => s.prefix?.length ?? 0),
+    );
     for (const signature of [...signatures].sort(
       (a, b) => (b.prefix?.length ?? 0) - (a.prefix?.length ?? 0),
     )) {
       const prefix = signature.prefix ?? [];
+      if (prefix.length !== specificity) continue;
       if (
         !prefix.every(
           (word, i) =>
@@ -344,17 +357,25 @@ export class Checker {
             scope,
             this.hasEmpty(contextual) ? undefined : contextual,
           );
-          if (parameter.kind === 'variable' && !genericType) genericType = found;
+          if (parameter.kind === 'variable' && !genericType && !this.hasEmpty(found))
+            genericType = found;
           if (
             parameter.kind === 'list' &&
             parameter.element.kind === 'variable' &&
             found.kind === 'list' &&
-            !genericType
+            !genericType &&
+            !this.hasEmpty(found.element)
           )
             genericType = found.element;
           const required = substitute(parameter);
-          this.require(found, required, args[i]);
+          if (!this.hasEmpty(found) || !this.hasEmpty(required))
+            this.require(found, required, args[i]);
           if (this.hasVoid(found)) this.error(args[i], 'Cannot pass void as an argument.');
+        }
+        for (let i = 0; i < args.length; i++) {
+          const required = substitute(signature.parameters[i] ?? signature.rest!);
+          if (!this.hasEmpty(required))
+            this.require(this.expression(args[i], scope, required), required, args[i]);
         }
         const returned = substitute(signature.result);
         if (this.hasEmpty(returned)) this.error(e, 'Cannot infer result element type.');
