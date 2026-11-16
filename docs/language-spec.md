@@ -183,9 +183,9 @@ let numbers = (match '[0-9]+' "release=r42 build=17")
 # numbers is ["42", "17"]
 ```
 
-Regex patterns are strings. Supported syntax includes literals, escaped metacharacters, `.`, character classes/ranges and negation, grouping `(...)`, alternation `|`, greedy repetition `?`, `*`, `+`, `{n}`, `{n,}`, `{n,m}`, and anchors `^`/`$`. Matching is case-sensitive, leftmost-first; alternatives are tried in written order. `.` excludes CR/LF; anchors refer to the complete input's start/end. Patterns expose full matches only, without capture-group results, flags, lookaround, backreferences, or lazy quantifiers.
+Regex patterns are strings. The engine is **RE2JS** (the installed version is pinned in `package-lock.json`), using [RE2 syntax](https://github.com/google/re2/wiki/Syntax); see the [RE2JS project](https://github.com/le0pard/re2js). Supported syntax includes literals, escaped metacharacters, `.`, character classes/ranges and negation, grouping `(...)`, alternation `|`, greedy repetition `?`, `*`, `+`, `{n}`, `{n,}`, `{n,m}`, and anchors `^`/`$`. Matching is case-sensitive, leftmost-first; alternatives are tried in written order. `.` excludes CR/LF; anchors refer to the complete input's start/end. Patterns expose full matches only, without capture-group results. RE2 lazy quantifiers and inline flags are supported. Lookaround and backreferences are unsupported by the engine.
 
-Invalid or unsupported patterns are runtime errors. After a zero-length match, matching advances by one Unicode code point; a match at the end is returned at most once. Regex execution is bounded by the game's execution limits. In particular, regex alternation inside a pattern string does not introduce a language pipe operator.
+Patterns are limited to 256 characters and inputs to 250,000 characters; results are limited to 10,000 matches. Invalid or unsupported patterns are runtime errors. After a zero-length match, matching advances by one Unicode code point; a match at the end is returned at most once. Regex execution is bounded by the game's execution limits. In particular, regex alternation inside a pattern string does not introduce a language pipe operator.
 
 ### Structured text
 

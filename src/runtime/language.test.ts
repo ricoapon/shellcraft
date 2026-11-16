@@ -138,7 +138,8 @@ describe('bounded regular expressions', () => {
   });
   it('rejects unsupported syntax and bounds pathological searches', () => {
     expect(() => matchText('(?=a)', 'a')).toThrow();
-    expect(() => matchText('a+?', 'a')).toThrow();
-    expect(() => matchText('(a|aa)+b', 'a'.repeat(40))).toThrow(/limit/);
+    expect(matchText('a+?', 'aaa')).toEqual(['a', 'a', 'a']);
+    expect(matchText('(a|aa)+b', 'a'.repeat(4000))).toEqual([]);
+    expect(() => matchText('a'.repeat(257), 'a')).toThrow(/256/);
   });
 });
