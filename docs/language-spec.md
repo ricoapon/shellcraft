@@ -126,7 +126,7 @@ contains (cat /notes/access.txt) "PASSWORD="
 let fields = (split "=" (cat /notes/access.txt))
 ```
 
-Parenthesized calls pass their typed result directly as an argument to the enclosing call. Inner results are not displayed, converted to terminal text, flattened, or implicitly iterated. A `void` result cannot be used as an argument. `echo` output is a display side effect and cannot be captured.
+Parenthesized calls pass their typed result directly as an argument to the enclosing call. Inner results are not displayed, converted to terminal text, flattened, or implicitly iterated. A `void` result cannot be used as an argument. `echo` explicitly prints its argument and returns that same typed value. For example, `let copy = (echo "hello")` prints hello and stores the string in copy. A standalone echo prints once; nested echoes each print once.
 
 There is no pipe operator. Intermediate variables may replace nested calls without changing their meaning.
 
@@ -162,7 +162,7 @@ type File = {name: string, path: string, type: string}
 | `append values: list<T> value: T -> list<T>`             | Return a list with one additional element.                                                                                                                                       |
 | `count value: string -> number`                          | Number of Unicode code points.                                                                                                                                                   |
 | `count values: list<T> -> number`                        | Number of elements.                                                                                                                                                              |
-| `echo value: T -> void`                                  | Display a value without changing its type or returning it.                                                                                                                       |
+| `echo value: T -> T`                                     | Print a value and return it unchanged, preserving its type.                                                                                                                      |
 | `from-json<T> text: string -> T`                         | Parse and validate JSON against an explicit static type.                                                                                                                         |
 | `hostname -> string`                                     | Current host ID.                                                                                                                                                                 |
 | `neighbors host?: string -> list<string>`                | Discover adjacent host IDs, sorted lexicographically; defaults to current host.                                                                                                  |

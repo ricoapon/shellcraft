@@ -64,3 +64,11 @@ npm run format:check
 ```
 
 `npm run make:showcase` writes an optional example save with networking available and no complete solvers.
+
+## GitHub Pages deployment
+
+In the repository's Settings > Pages, select **GitHub Actions** as the build source once. Pushes to main then run .github/workflows/pages.yml: npm ci, formatting, the full test suite, and the production build (including TypeScript checks). Only a successful build is uploaded from dist and deployed. The workflow can also be started manually on main. It uses Node.js 24 and GitHub's Pages artifact/deployment actions; no personal access token or gh-pages branch is needed.
+
+The workflow reads the configured Pages base path, so project assets work under /shellcraft/ and custom-domain sites can use /. For a local project-path build, set VITE_BASE_PATH=/shellcraft/ before npm run build; ordinary local builds use /.
+
+Published build IDs look like **42.1-e675464**: workflow run number, attempt number, and the first seven characters of the Git commit. Attempts distinguish reruns without tags or package-version changes. Type `version` in the game to display the loaded bundle's version string. The same version is published at version.json beside index.html and recorded in the workflow summary. An already-open tab reports the bundle it loaded; reload to pick up a later deployment. Local builds without CI metadata report development. Build identity is independent of player save versions.

@@ -96,6 +96,8 @@ export interface NativeCommand {
   signatures: readonly Signature[];
   /** Registry-derived help, supplied only while the command is visible. */
   help?: readonly string[];
+  /** False when a command explicitly displays its result itself. */
+  autoDisplay?: boolean;
 }
 export interface LanguageHost {
   commands(): readonly NativeCommand[];

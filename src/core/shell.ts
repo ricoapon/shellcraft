@@ -55,6 +55,7 @@ export class Shell {
         return this.registry.definitions().map((command) => ({
           name: command.name,
           signatures: command.signatures,
+          autoDisplay: command.autoDisplay,
           help: visible.has(command.name) ? commandHelp(command) : undefined,
         }));
       },

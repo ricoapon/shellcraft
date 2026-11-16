@@ -283,13 +283,17 @@ export class Checker {
         break;
       }
       case 'call':
-        t = this.call(e, scope);
+        t = this.call(e, scope, expected);
         break;
     }
     this.types.set(e, t);
     return t;
   }
-  private call(e: Extract<Expr, { kind: 'call' }>, scope: Map<string, Binding>): Type {
+  private call(
+    e: Extract<Expr, { kind: 'call' }>,
+    scope: Map<string, Binding>,
+    expected?: Type,
+  ): Type {
     const signatures =
       this.natives.get(e.name)?.signatures ??
       (this.signatures.has(e.name) ? [this.signatures.get(e.name)!] : undefined);
@@ -341,7 +345,8 @@ export class Checker {
         failures.push('Command is interactive-only: ' + e.name);
         continue;
       }
-      let genericType = explicit;
+      const directGeneric = signature.result.kind === 'variable';
+      let genericType = explicit ?? (directGeneric ? expected : undefined);
       const substitute = (t: Type): Type =>
         t.kind === 'variable'
           ? (genericType ?? { kind: 'empty' })
@@ -377,8 +382,15 @@ export class Checker {
           if (!this.hasEmpty(required))
             this.require(this.expression(args[i], scope, required), required, args[i]);
         }
+        if (!genericType && directGeneric) {
+          const index = signature.parameters.findIndex(
+            (parameter) => parameter.kind === 'variable',
+          );
+          if (index >= 0 && args[index]) genericType = this.types.get(args[index]);
+        }
         const returned = substitute(signature.result);
-        if (this.hasEmpty(returned)) this.error(e, 'Cannot infer result element type.');
+        if (this.hasEmpty(returned) && !(directGeneric && genericType))
+          this.error(e, 'Cannot infer result element type.');
         if (explicit) this.typeArguments.set(e, explicit);
         return returned;
       } catch (error) {

@@ -174,7 +174,12 @@ export class LanguageSession {
             break;
           case 'expression': {
             const value = await this.value(s.value, scope);
-            if (value !== undefined) this.host.display(value);
+            const commandName = s.value.kind === 'call' ? s.value.name : undefined;
+            const autoDisplay =
+              commandName === undefined ||
+              this.host.commands().find((command) => command.name === commandName)?.autoDisplay !==
+                false;
+            if (value !== undefined && autoDisplay) this.host.display(value);
             break;
           }
           case 'if':
