@@ -5,7 +5,7 @@ import { solver, solverLibrary } from '../../tests/fixtures/solvers';
 import { createInstance } from '../content/missions';
 it('preserves files but saves no shell output, history, or interpreter bindings', async () => {
   const g = new GameEngine();
-  await g.execute('write /home/note.txt persisted');
+  await g.execute('write /home/note.txt "persisted"');
   await g.execute('let secret = "private-command-text"; echo $secret');
   const saved = g.snapshot();
   expect(JSON.stringify(saved)).not.toContain('private-command-text');
@@ -22,7 +22,9 @@ it('uses a traveling notebook while level evidence stays read-only', async () =>
   await g.execute('edit /home/tool.sc');
   await g.closeEditor('save', 'hostname');
   expect((await g.execute('run /home/tool.sc')).output).toEqual(['archive']);
-  expect((await g.execute('write /notes/new.txt forbidden')).output.join()).toContain('read-only');
+  expect((await g.execute('write /notes/new.txt "forbidden"')).output.join()).toContain(
+    'read-only',
+  );
 });
 it('installs only skeletons and small examples while preserving old player files', () => {
   const g = new GameEngine();

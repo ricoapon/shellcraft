@@ -37,7 +37,6 @@ export interface CompletionResult {
   replaceTo: number;
 }
 function decode(image: string): string {
-  if (image.startsWith("'")) return image.slice(1, image.endsWith("'") ? -1 : undefined);
   if (image.startsWith('"')) {
     let content = image.slice(1, image.endsWith('"') ? -1 : undefined);
     if (content.endsWith('\\') && !content.endsWith('\\\\')) content = content.slice(0, -1);
@@ -72,16 +71,17 @@ export function completionsAt(
       offset <= (t.endOffset ?? t.startOffset) + 1 &&
       !['Newline', 'Semicolon'].includes(t.tokenType.name),
   );
+  if (current?.tokenType.name === 'SingleQuoted') return output;
   if (current?.startOffset === offset && source[offset - 1] === '$') current = undefined;
   // A lone $ is an unfinished Variable token and is omitted by the lexer.
   const start = current?.startOffset ?? (source[offset - 1] === '$' ? offset - 1 : offset);
   const raw = source.slice(start, offset);
   output.replaceFrom = start;
   output.replaceTo = current ? (current.endOffset ?? current.startOffset) + 1 : offset;
-  const quoted = raw.startsWith('"') || raw.startsWith("'");
+  const quoted = raw.startsWith('"');
   const prefix = quoted ? decode(raw) : raw;
   const tokenTail = current
-    ? source.slice(offset, (current.endOffset ?? offset) + 1).replace(quoted ? /['"]$/ : /$^/, '')
+    ? source.slice(offset, (current.endOffset ?? offset) + 1).replace(quoted ? /"$/ : /$^/, '')
     : '';
   const frames: Frame[] = [{ args: [], group: 'root', generic: 0 }];
   for (let i = 0; i < tokens.length; i++) {
@@ -267,14 +267,8 @@ export function completionsAt(
               ? tokenTail.slice(tokenTail.indexOf('/') + 1)
               : '';
           const value = entry.path + tail;
-          const quote =
-            raw.startsWith("'") && !value.includes("'")
-              ? "'"
-              : quoted || !/^[A-Za-z0-9_./-]+$/.test(value)
-                ? '"'
-                : '';
-          const encode = (text: string) =>
-            quote === "'" ? "'" + text + "'" : quote === '"' ? JSON.stringify(text) : text;
+          const quote = quoted || !/^[A-Za-z0-9_./-]+$/.test(value);
+          const encode = (text: string) => (quote ? JSON.stringify(text) : text);
           const insertText = encode(value),
             cursorOffset =
               entry.type === 'directory' ? encode(entry.path).length - (quote ? 1 : 0) : undefined;
@@ -349,24 +343,18 @@ export function terminalCompletionEdit(
     prefix = prefix.slice(0, length);
   }
   const raw = source.slice(info.replaceFrom, cursor);
-  const quoted = raw.startsWith('"') || raw.startsWith("'");
+  const quoted = raw.startsWith('"');
   const typed = quoted ? decode(raw) : raw;
   if (prefix.length <= typed.length || !prefix.startsWith(typed)) return;
   if (info.completions.every((item) => item.kind === 'file' || item.kind === 'directory')) {
     // Encode the shared path itself: candidates may need different quoting.
     // Keep any later path components when completing in the middle of a path.
-    const remainder = source.slice(cursor, info.replaceTo).replace(quoted ? /['"]$/ : /$^/, '');
+    const remainder = source.slice(cursor, info.replaceTo).replace(quoted ? /"$/ : /$^/, '');
     const slash = remainder.indexOf('/');
     const tail = slash < 0 ? '' : remainder.slice(slash + (prefix.endsWith('/') ? 1 : 0));
     const value = prefix + tail;
-    const quote =
-      raw.startsWith("'") && !value.includes("'")
-        ? "'"
-        : quoted || !/^[A-Za-z0-9_./-]+$/.test(value)
-          ? '"'
-          : '';
-    const encode = (text: string) =>
-      quote === "'" ? "'" + text + "'" : quote === '"' ? JSON.stringify(text) : text;
+    const quote = quoted || !/^[A-Za-z0-9_./-]+$/.test(value);
+    const encode = (text: string) => (quote ? JSON.stringify(text) : text);
     return completionEdit(source, info, {
       ...first,
       insertText: encode(value),

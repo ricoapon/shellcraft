@@ -12,6 +12,8 @@ import {
 } from './types';
 import type { LanguageHost, NativeCommand, Signature, Type } from './types';
 import type { Expr, Statement, TypeNode } from './syntax';
+const matchesWord = (argument: Expr | undefined, word: string) =>
+  (argument?.kind === 'word' || argument?.kind === 'literal') && argument.value === word;
 export type Definition = Extract<Statement, { kind: 'def' }>;
 export interface Binding {
   type: Type;
@@ -285,6 +287,11 @@ export class Checker {
       case 'call':
         t = this.call(e, scope, expected);
         break;
+      case 'word':
+        this.error(
+          e,
+          `Unquoted string ${JSON.stringify(e.value)}. Use double quotes for text or $name to reference a variable.`,
+        );
     }
     this.types.set(e, t);
     return t;
@@ -305,13 +312,7 @@ export class Checker {
     const specificity = Math.max(
       0,
       ...signatures
-        .filter((s) =>
-          (s.prefix ?? []).every(
-            (word, i) =>
-              e.args[i]?.kind === 'literal' &&
-              (e.args[i] as Extract<Expr, { kind: 'literal' }>).value === word,
-          ),
-        )
+        .filter((s) => (s.prefix ?? []).every((word, i) => matchesWord(e.args[i], word)))
         .map((s) => s.prefix?.length ?? 0),
     );
     for (const signature of [...signatures].sort(
@@ -319,14 +320,7 @@ export class Checker {
     )) {
       const prefix = signature.prefix ?? [];
       if (prefix.length !== specificity) continue;
-      if (
-        !prefix.every(
-          (word, i) =>
-            e.args[i]?.kind === 'literal' &&
-            (e.args[i] as Extract<Expr, { kind: 'literal' }>).value === word,
-        )
-      )
-        continue;
+      if (!prefix.every((word, i) => matchesWord(e.args[i], word))) continue;
       const args = e.args.slice(prefix.length);
       if (
         args.length < (signature.minimum ?? signature.parameters.length) ||
@@ -354,14 +348,31 @@ export class Checker {
             ? list(substitute(t.element))
             : t;
       try {
+        // Check quoting before overload-specific types, so a missing $ cannot
+        // be hidden by a less relevant overload's type mismatch.
+        for (let i = 0; i < args.length; i++) {
+          const parameter = signature.parameters[i] ?? signature.rest!;
+          if (
+            args[i].kind === 'word' &&
+            (parameter.kind !== 'string' || !signature.completion?.[i])
+          )
+            this.expression(args[i], scope);
+        }
         for (let i = 0; i < args.length; i++) {
           const parameter = signature.parameters[i] ?? signature.rest!;
           const contextual = substitute(parameter);
-          const found = this.expression(
-            args[i],
-            scope,
-            this.hasEmpty(contextual) ? undefined : contextual,
-          );
+          const argument = args[i];
+          // Declared path/identifier arguments keep shell shorthand. Ordinary
+          // string values must be quoted; completion metadata owns that boundary.
+          const found =
+            argument.kind === 'word'
+              ? string
+              : this.expression(
+                  argument,
+                  scope,
+                  this.hasEmpty(contextual) ? undefined : contextual,
+                );
+          this.types.set(argument, found);
           if (parameter.kind === 'variable' && !genericType && !this.hasEmpty(found))
             genericType = found;
           if (
@@ -378,6 +389,7 @@ export class Checker {
           if (this.hasVoid(found)) this.error(args[i], 'Cannot pass void as an argument.');
         }
         for (let i = 0; i < args.length; i++) {
+          if (args[i].kind === 'word') continue;
           const required = substitute(signature.parameters[i] ?? signature.rest!);
           if (!this.hasEmpty(required))
             this.require(this.expression(args[i], scope, required), required, args[i]);

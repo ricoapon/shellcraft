@@ -250,6 +250,7 @@ export class LanguageSession {
     try {
       switch (e.kind) {
         case 'literal':
+        case 'word':
           return e.value;
         case 'variable':
           return scope.get(e.name).value;

@@ -27,7 +27,7 @@ it('allows keyword field names and orders strings by Unicode code points', async
 });
 it('rejects incomplete reserved subcommands before execution', async () => {
   const g = new GameEngine();
-  const result = await g.execute('write /home/no-effect test; mission submit --script');
+  const result = await g.execute('write "/home/no-effect" "test"; mission submit --script');
   expect(result.output.join()).toContain('Usage: mission');
   expect(() => g.world.home.filesystem.readFile('/home/no-effect')).toThrow();
 });

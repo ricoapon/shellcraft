@@ -5,6 +5,7 @@ export const homeFiles: Record<string, string> = {
 
 Start with mission start files-1. Use ls and cat to inspect evidence.
 The shell and .sc files use exactly the same language. Try guide scripts.
+Text values require double quotes; variables use $name. Bare paths still work.
 Save your program with edit /home/solve.sc, then run /home/solve.sc.
 One star means solved by any method. mission submit --script /home/solve.sc
 verifies fresh cases for the optional second star. Hints never reduce stars.
@@ -21,7 +22,7 @@ Files and progress are saved. Terminal output, history, and variables are tempor
 `,
   '/home/solve.sc': starterSource,
   '/home/example.sc':
-    '# Individual operations, not a mission solver.\nlet text = "release=r42"\necho (split "=" $text)\necho (match \'[0-9]+\' $text)\n',
+    '# Individual operations, not a mission solver.\nlet text = "release=r42"\necho (split "=" $text)\necho (match "[0-9]+" $text)\n',
 };
 export function installHomeFiles(filesystem: VirtualFileSystem) {
   for (const [path, text] of Object.entries(homeFiles)) {

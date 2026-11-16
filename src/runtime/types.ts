@@ -81,6 +81,7 @@ export type CompletionTarget =
   | { kind: 'host' | 'mission' | 'command' }
   | { kind: 'choices'; values: readonly string[] };
 export interface Signature {
+  /** Declared path/identifier roles allow bare shell arguments and drive completion. */
   completion?: readonly (CompletionTarget | undefined)[];
   parameters: Type[];
   result: Type;

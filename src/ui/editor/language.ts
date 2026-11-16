@@ -18,7 +18,6 @@ monaco.languages.setLanguageConfiguration('shellcraft', {
     { open: '[', close: ']' },
     { open: '(', close: ')' },
     { open: '"', close: '"' },
-    { open: "'", close: "'" },
   ],
   wordPattern: /\$?[A-Za-z_][\w-]*/g,
 });
@@ -44,7 +43,8 @@ monaco.languages.setMonarchTokensProvider('shellcraft', {
   tokenizer: {
     root: [
       [/#.*$/, 'comment'],
-      [/"(?:\\.|[^"\\])*"|'[^']*'/, 'string'],
+      [/"(?:\\.|[^"\\])*"/, 'string'],
+      [/'[^']*'?/, 'invalid'],
       [/\$[A-Za-z_]\w*/, 'variable'],
       [/-?\d+(?:\.\d+)?/, 'number'],
       [/\b(?:true|false)\b/, 'number'],
@@ -56,7 +56,7 @@ monaco.languages.setMonarchTokensProvider('shellcraft', {
   },
 });
 monaco.languages.registerCompletionItemProvider('shellcraft', {
-  triggerCharacters: ['$', '.', '/', ' ', '"', "'"],
+  triggerCharacters: ['$', '.', '/', ' ', '"'],
   async provideCompletionItems(model, position, _context, cancellation) {
     if (!inspector) return { suggestions: [] };
     const source = model.getValue(),

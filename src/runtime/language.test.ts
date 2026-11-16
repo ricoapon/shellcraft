@@ -39,13 +39,13 @@ function fixture() {
 describe('shared Shellcraft language', () => {
   it('uses typed results for nested calls and displays only uncaptured values', async () => {
     const f = fixture();
-    await f.session.execute('let value = (read /file); contains $value ex; echo $value');
+    await f.session.execute('let value = (read "/file"); contains $value "ex"; echo $value');
     expect(f.output).toEqual([true, 'text']);
     expect(f.calls).toEqual([['/file'], ['text', 'ex'], ['text']]);
   });
   it('checks the complete submission before side effects', async () => {
     const f = fixture();
-    await expect(f.session.execute('echo before; let x: number = "wrong"')).rejects.toThrow(
+    await expect(f.session.execute('echo "before"; let x: number = "wrong"')).rejects.toThrow(
       /Expected number/,
     );
     expect(f.output).toEqual([]);
@@ -54,7 +54,7 @@ describe('shared Shellcraft language', () => {
   it('supports mutation, loops, branches, short circuit, and structural values', async () => {
     const f = fixture();
     await f.session.execute(
-      'mut total = 0; for n in [1, 2, 3] { if $n == 2 { continue }; $total = $total + $n }; while $total < 6 { $total = $total + 1 }; echo $total; echo (false and (read missing) == "x"); echo ({a: [1]} == {a: [1]})',
+      'mut total = 0; for n in [1, 2, 3] { if $n == 2 { continue }; $total = $total + $n }; while $total < 6 { $total = $total + 1 }; echo $total; echo (false and (read "missing") == "x"); echo ({a: [1]} == {a: [1]})',
     );
     expect(f.output).toEqual([6, false, true]);
     await expect(f.session.execute('let immutable = 1; $immutable = 2')).rejects.toThrow(
@@ -91,11 +91,11 @@ describe('shared Shellcraft language', () => {
     const f = fixture();
     f.files['/home/lib.sc'] =
       'type Pair = {name: string}; def make [] -> Pair { return {name: "ok"} }';
-    await f.session.execute('use /home/lib.sc; use /home/lib.sc; let p = (make); echo $p.name');
+    await f.session.execute('use "/home/lib.sc"; use "/home/lib.sc"; let p = (make); echo $p.name');
     expect(f.output).toEqual(['ok']);
-    f.files['/home/cycle.sc'] = 'use ./cycle.sc';
-    await expect(f.session.execute('use /home/cycle.sc')).rejects.toThrow(/Circular import/);
-    await expect(f.session.execute('use /elsewhere.sc')).rejects.toThrow(/under \/home/);
+    f.files['/home/cycle.sc'] = 'use "./cycle.sc"';
+    await expect(f.session.execute('use "/home/cycle.sc"')).rejects.toThrow(/Circular import/);
+    await expect(f.session.execute('use "/elsewhere.sc"')).rejects.toThrow(/under \/home/);
   });
   it('has bounded execution and can recover from errors', async () => {
     const f = fixture();
@@ -104,7 +104,7 @@ describe('shared Shellcraft language', () => {
     );
     await expect(f.session.execute('echo (1 / 0)')).rejects.toThrow(/zero/);
     await expect(f.session.execute('echo [1][2]')).rejects.toThrow(/out of range/);
-    await f.session.execute('echo recovered');
+    await f.session.execute('echo "recovered"');
     expect(f.output).toEqual(['recovered']);
   });
   it('reports source positions and rejects JavaScript/unsupported operators', () => {

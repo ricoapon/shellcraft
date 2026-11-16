@@ -26,10 +26,10 @@ echo $first.path
 - `#` starts a comment outside strings. Keywords cannot be used as variable, parameter, type, or command names; they may be used as record field names.
 - Command calls use `name argument ...`; built-in subcommands use fixed names such as `mission submit`.
 - Value operations are ordinary commands available identically in the terminal and scripts: `contains "hello world" "world"`, `split "=" "password=secret"`. Dot notation accesses record fields only; method calls such as `$text.split("=")` are unsupported.
-- In command arguments, bare words and paths are string literals. Numeric literals, `true`, `false`, `$variables`, lists, and records retain their types. Quote a word to force a string, such as `"true"`.
+- Ordinary text values require double quotes in both the terminal and scripts. Use `$content` to read a variable; `contains content PASSWORD` is an error, while `contains $content "PASSWORD"` is valid. Command/subcommand names and declared path or identifier arguments retain shell shorthand: `cat /notes/access.txt`, `mission start files-1`, `help cat`, and `guide scripts`. This allowance comes from the command signature, not from guessing whether a word looks like a path. Numeric literals, `true`, `false`, `$variables`, lists, and records retain their types.
 - Arguments are separated by whitespace. Parentheses group expressions and capture command results: `cat $file.path`, `echo ($count + 1)`, `let text = (cat /notes/access.txt)`.
 - In expressions, strings must be quoted. Variables always use `$`; declarations omit it. There is no interpolation, glob expansion, or word splitting.
-- Single-quoted strings are literal. Double-quoted strings support `\n`, `\r`, `\t`, `\"`, and `\\`; other escapes are errors. Literal newlines inside strings are disallowed.
+- Single-quoted strings are rejected. Double-quoted strings support `\n`, `\r`, `\t`, `\"`, and `\\`; other escapes are errors. Literal newlines inside strings are disallowed.
 - Lists use commas: `["a", "b"]`. Records use named fields: `{name: "note", active: true}`. Empty values are `[]` and `{}`. Trailing commas are permitted.
 
 ## Types
@@ -179,7 +179,7 @@ contains "hello world" "world"          # true
 contains ["node-1", "node-2"] "node-1"  # true
 let fields = (split "=" "password=secret")
 let value = (trim $fields[1])
-let numbers = (match '[0-9]+' "release=r42 build=17")
+let numbers = (match "[0-9]+" "release=r42 build=17")
 # numbers is ["42", "17"]
 ```
 

@@ -15,7 +15,7 @@ Start with `mission start files-1`. Six file levels teach traversal, filtering, 
 
 ## One language, shell and scripts
 
-The prompt and saved `.sc` files use the same statically typed language:
+The prompt and saved `.sc` files use the same statically typed language. Ordinary text requires double quotes; single-quoted strings are rejected. Variables use `$name`. Declared paths and command identifiers keep shell shorthand, so `cat /home/access.txt` and `mission start files-1` remain valid:
 
 ```text
 let files = (ls /notes)

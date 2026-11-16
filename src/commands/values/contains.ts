@@ -5,6 +5,8 @@ export const contains: Command = {
   name: 'contains',
   usage: 'contains <text|list> <part|element>',
   description: 'Test substring or list membership.',
+  details: 'Use $name for variables and double quotes for text. Bare words are not text values.',
+  example: 'contains $content "PASSWORD"',
   signatures: [
     { parameters: [string, string], result: bool },
     { parameters: [list(generic), generic], result: bool },

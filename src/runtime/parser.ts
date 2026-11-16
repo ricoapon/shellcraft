@@ -35,8 +35,9 @@ const White = createToken({ name: 'White', pattern: /[^\S\r\n]+/, group: Lexer.S
 const Comment = createToken({ name: 'Comment', pattern: /#[^\r\n]*/, group: 'comments' });
 const Newline = symbol('Newline', /\r?\n/),
   Semicolon = symbol('Semicolon', /;/);
-const Text = symbol('Text', /"(?:\\[^\r\n]|[^"\\\r\n])*"|'[^'\r\n]*'/);
-const Unclosed = symbol('Unclosed', /"(?:\\[^\r\n]|[^"\\\r\n])*|'[^'\r\n]*/);
+const Text = symbol('Text', /"(?:\\[^\r\n]|[^"\\\r\n])*"/);
+const Unclosed = symbol('Unclosed', /"(?:\\[^\r\n]|[^"\\\r\n])*/);
+const SingleQuoted = symbol('SingleQuoted', /'[^'\r\n]*'?/);
 const Numeric = createToken({
   name: 'Numeric',
   pattern: /-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/,
@@ -81,6 +82,7 @@ const vocabulary = [
   Comment,
   Newline,
   Semicolon,
+  SingleQuoted,
   Text,
   Unclosed,
   Numeric,
@@ -157,7 +159,6 @@ const loc = (t: IToken, source: string): Location => ({
   column: t.startColumn ?? 1,
 });
 function stringValue(t: IToken): string {
-  if (t.image.startsWith("'")) return t.image.slice(1, -1);
   if (/\\(?![nrt"\\])/.test(t.image)) throw new Error('Invalid string escape.');
   return JSON.parse(t.image);
 }
@@ -716,7 +717,7 @@ export class ShellcraftParser extends EmbeddedActionsParser {
         ALT: () => {
           const token = this.CONSUME(Word);
           return this.ACTION(() => ({
-            kind: 'literal' as const,
+            kind: 'word' as const,
             at: loc(token, this.filename),
             value: token.image,
           }));
@@ -786,6 +787,12 @@ function lex(source: string, filename: string) {
       'Source exceeds 250 KB.',
     );
   const result = lexer.tokenize(source);
+  const singleQuoted = result.tokens.find((token) => tokenMatcher(token, SingleQuoted));
+  if (singleQuoted)
+    throw new LanguageError(
+      loc(singleQuoted, filename),
+      'Single-quoted strings are not supported. Use double quotes.',
+    );
   const unclosed = result.tokens.find((t) => tokenMatcher(t, Unclosed));
   if (unclosed) throw new LanguageError(loc(unclosed, filename), 'Unclosed quote.', true);
   if (result.errors.length) {

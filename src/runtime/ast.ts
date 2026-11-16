@@ -13,6 +13,7 @@ export type TypeNode = {
 };
 export type Expr = { at: Location } & (
   | { kind: 'literal'; value: Value }
+  | { kind: 'word'; value: string }
   | { kind: 'variable'; name: string }
   | { kind: 'list'; items: Expr[] }
   | { kind: 'record'; fields: Record<string, Expr> }

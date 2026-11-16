@@ -24,12 +24,12 @@ it('starts a fresh terminal on transitions and reload, persisting only durable s
   await import('./worker');
   const boot = await request('init');
   expect(boot.entries?.[0].output.join()).toContain('Welcome to Shellcraft');
-  await request('command', 'echo temporary-history');
+  await request('command', 'echo "temporary-history"');
   const started = await request('command', 'mission start files-1');
   expect(started.reply?.clearScreen).toBe(true);
   expect(started.entries?.length).toBe(1);
   expect(started.view?.host).toBe('archive');
-  await request('command', 'echo another-private-command');
+  await request('command', 'echo "another-private-command"');
   const exported = await request('export');
   expect(exported.save).not.toHaveProperty('shell');
   expect(JSON.stringify(exported.save)).not.toContain('another-private-command');
@@ -52,7 +52,7 @@ it('resets durable and live state together, preserving the old game if persisten
   const password = String(note.reply?.values?.[0]).trim().split('=')[1];
   await request('command', 'mission submit ' + JSON.stringify(password));
   await request('command', 'edit /home/draft.sc');
-  await request('editorDraft', 'echo unsaved');
+  await request('editorDraft', 'echo "unsaved"');
   const before = (await request('export')).save!;
   expect(before.progress.stars['files-1']).toBe(1);
   const action = await request('command', 'save reset');

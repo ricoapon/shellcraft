@@ -4,14 +4,14 @@ import { createInstance } from '../content/missions';
 it('clears output on successful entry, reset and leave, but not on invalid transitions', async () => {
   const game = new GameEngine();
   await game.initialize();
-  await game.execute('echo old-output');
+  await game.execute('echo "old-output"');
   expect((await game.execute('mission start network-4')).clearScreen).toBeUndefined();
   const start = await game.execute('mission start files-1');
   expect(start.clearScreen).toBe(true);
   expect(start.host).toBe('archive');
   expect(JSON.stringify(game.shell)).not.toContain('old-output');
   expect(start.output.join()).toContain('personal /home');
-  await game.execute('echo discard-me');
+  await game.execute('echo "discard-me"');
   expect((await game.execute('mission reset')).clearScreen).toBe(true);
   expect(JSON.stringify(game.shell)).not.toContain('discard-me');
   expect((await game.execute('mission leave')).clearScreen).toBe(true);
@@ -40,11 +40,11 @@ it('keeps the command set focused and hides tools until relevant', async () => {
 it.each([
   'mission list nonsense',
   'mission start',
-  'mission hint extra',
+  'mission hint "extra"',
   'mission submit --script',
-  'mission submit --script /home/solve.sc NaN',
+  'mission submit --script /home/solve.sc "NaN"',
   'mission submit --script /home/solve.sc -1',
-  'mission leave extra',
+  'mission leave "extra"',
 ])('rejects invalid command syntax: %s', async (command) => {
   const game = new GameEngine();
   expect((await game.execute(command)).output.join()).toMatch(

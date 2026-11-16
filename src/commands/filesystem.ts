@@ -68,7 +68,8 @@ export const filesystemCommands: readonly Command[] = [
     name: 'write',
     usage: 'write <path> <text>',
     description: 'Create or replace a file.',
-    details: 'The parent must exist. Level evidence is read-only. Quote text containing spaces.',
+    details:
+      'The parent must exist. Level evidence is read-only. Text values require double quotes; paths may be bare.',
     signatures: [
       {
         completion: [{ kind: 'path', scope: 'host' }],

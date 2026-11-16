@@ -3,7 +3,7 @@ import { GameEngine } from '../game/engine';
 it('creates, lists, reads, navigates, and removes files using structured commands', async () => {
   const g = new GameEngine();
   await g.execute(
-    'mkdir /home/notes; write "/home/notes/my file" "hello"; write /home/notes/.hidden yes',
+    'mkdir /home/notes; write "/home/notes/my file" "hello"; write /home/notes/.hidden "yes"',
   );
   const text = (await g.execute('ls /home/notes')).output.join();
   expect(text).toContain('name');
@@ -22,7 +22,7 @@ it('rejects invalid arguments before effects and keeps navigation intact after e
   expect((await g.execute('pwd')).output).toEqual(['/home']);
   expect((await g.execute('write /home/a 1')).output.join()).toContain('Expected string');
   expect((await g.execute('cat')).output.join()).toContain('Usage: cat <path>');
-  expect((await g.execute('ls /home /')).output.join()).toContain('Usage: ls');
+  expect((await g.execute('ls /home "/"')).output.join()).toContain('Usage: ls');
 });
 it('uses explicit quoting for filenames with spaces and treats dash names literally', async () => {
   const g = new GameEngine();

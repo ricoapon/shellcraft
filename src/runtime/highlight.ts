@@ -2,6 +2,7 @@ import { lexicalTokens } from './syntax';
 const colors: Record<string, string> = {
   Text: '166;218;149',
   Unclosed: '166;218;149',
+  SingleQuoted: '237;135;150',
   Numeric: '245;169;127',
   Variable: '138;173;244',
 };

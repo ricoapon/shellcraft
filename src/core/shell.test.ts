@@ -18,11 +18,11 @@ describe('shared shell', () => {
     const shell = make();
     expect((await shell.submit('unknown')).output?.join()).toContain('Unknown command');
     expect((await shell.submit('echo "unfinished')).output?.join()).toContain('Unclosed quote');
-    expect((await shell.submit('echo recovered')).output).toEqual(['recovered']);
+    expect((await shell.submit('echo "recovered"')).output).toEqual(['recovered']);
   });
   it('typechecks complete submissions before changing the filesystem', async () => {
     const shell = make();
-    const r = await shell.submit('write /home/nope test; let x: number = "bad"');
+    const r = await shell.submit('write /home/nope "test"; let x: number = "bad"');
     expect(r.output?.join()).toContain('Expected number');
     expect((await shell.submit('cat /home/nope')).output?.join()).toContain('Path not found');
   });

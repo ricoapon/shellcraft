@@ -13,7 +13,7 @@ it('roundtrips files, active navigation, stars and editor drafts without transcr
   await game.execute('cd /notes');
   await game.execute('edit /home/new.js');
   game.settings.editor!.draft = 'not saved';
-  await game.execute('echo must-not-persist');
+  await game.execute('echo "must-not-persist"');
   const snapshot = validateGameSave(game.snapshot());
   expect(JSON.stringify(snapshot)).not.toContain('must-not-persist');
   const restored = new GameEngine(snapshot);
