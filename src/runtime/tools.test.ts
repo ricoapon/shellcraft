@@ -58,4 +58,12 @@ it('recognizes complete and incomplete multiline shell submissions', () => {
   expect(isIncomplete('for file in (ls /) {')).toBe(true);
   expect(isIncomplete('for file in (ls /) {\n echo $file.name\n}')).toBe(false);
   expect(isIncomplete('let values = [\n1,\n2\n]')).toBe(false);
+  expect(isIncomplete('cat *')).toBe(false);
+  expect(isIncomplete('let value =')).toBe(false);
+  expect(isIncomplete('echo (2 *')).toBe(true);
+  expect(isIncomplete('echo (2 *\n3)')).toBe(false);
+  const g = new GameEngine();
+  expect(g.languageTools('cat *', '<terminal>', 5, true).diagnostics[0].message).toContain(
+    'Wildcard expansion is not supported',
+  );
 });

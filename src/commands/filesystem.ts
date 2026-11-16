@@ -53,6 +53,8 @@ export const filesystemCommands: readonly Command[] = [
     name: 'cat',
     usage: 'cat <path>',
     description: 'Read file text.',
+    details:
+      'Read one path. Wildcard expansion is not supported; use ls to find files. Quote "*" to read a file literally named *.',
     signatures: [
       {
         completion: [{ kind: 'path', scope: 'host', entries: 'file' }],

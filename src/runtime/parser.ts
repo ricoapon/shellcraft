@@ -838,7 +838,9 @@ export function parse(source: string, filename = '<terminal>'): Statement[] {
             offset: source.length,
           }
         : loc(error.token, filename),
-      error.message,
+      end && last && tokenMatcher(last, Times)
+        ? "Expected an expression after '*'. Wildcard expansion is not supported."
+        : error.message,
       end,
     );
   }
@@ -849,7 +851,15 @@ export function isIncomplete(source: string): boolean {
     parse(source);
     return false;
   } catch (error) {
-    return error instanceof LanguageError && error.incomplete;
+    if (!(error instanceof LanguageError) || !error.incomplete) return false;
+    // Readline continues by inserting a newline. Only wait if that newline
+    // keeps the source incomplete, rather than making it invalid (cat *, let x =).
+    try {
+      parse(source + '\n');
+      return false;
+    } catch (continued) {
+      return continued instanceof LanguageError && continued.incomplete;
+    }
   }
 }
 export function lexicalTokens(source: string) {
