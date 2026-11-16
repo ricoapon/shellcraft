@@ -71,7 +71,17 @@ export function validateValue(value: unknown, type: Type): Value {
   throw new Error(`Expected ${typeName(type)} in JSON input.`);
 }
 
+export type CompletionTarget =
+  | {
+      kind: 'path';
+      scope: 'host' | 'workspace' | 'module';
+      entries?: 'file' | 'directory';
+      extension?: string;
+    }
+  | { kind: 'host' | 'mission' | 'command' }
+  | { kind: 'choices'; values: readonly string[] };
 export interface Signature {
+  completion?: readonly (CompletionTarget | undefined)[];
   parameters: Type[];
   result: Type;
   minimum?: number;

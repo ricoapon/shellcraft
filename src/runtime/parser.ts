@@ -32,7 +32,7 @@ const True = keyword('True', 'true'),
   Not = keyword('Not', 'not');
 const symbol = (name: string, pattern: RegExp) => createToken({ name, pattern });
 const White = createToken({ name: 'White', pattern: /[^\S\r\n]+/, group: Lexer.SKIPPED });
-const Comment = createToken({ name: 'Comment', pattern: /#[^\r\n]*/, group: Lexer.SKIPPED });
+const Comment = createToken({ name: 'Comment', pattern: /#[^\r\n]*/, group: 'comments' });
 const Newline = symbol('Newline', /\r?\n/),
   Semicolon = symbol('Semicolon', /;/);
 const Text = symbol('Text', /"(?:\\[^\r\n]|[^"\\\r\n])*"|'[^'\r\n]*'/);

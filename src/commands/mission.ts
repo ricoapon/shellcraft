@@ -17,13 +17,20 @@ export const mission: Command = {
     'One star means solved; two means a script solves fresh cases. Hints do not affect stars. Programs may start and leave missions. Verification runs independently.',
   signatures: [
     { parameters: [], result: list(levelType) },
-    { prefix: ['list'], parameters: [string], minimum: 0, result: list(levelType) },
-    { prefix: ['start'], parameters: [string], result: nothing },
+    {
+      prefix: ['list'],
+      parameters: [string],
+      minimum: 0,
+      result: list(levelType),
+      completion: [{ kind: 'choices', values: ['files', 'network'] }],
+    },
+    { prefix: ['start'], parameters: [string], result: nothing, completion: [{ kind: 'mission' }] },
     ...['reset', 'leave'].map((word) => ({ prefix: [word], parameters: [], result: nothing })),
     ...['briefing', 'hint'].map((word) => ({ prefix: [word], parameters: [], result: string })),
     { prefix: ['status'], parameters: [], result: record({ id: string, status: string }) },
     {
       prefix: ['submit', '--script'],
+      completion: [{ kind: 'path', scope: 'workspace', extension: '.sc' }],
       parameters: [string, number],
       minimum: 1,
       result: nothing,

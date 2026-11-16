@@ -72,6 +72,10 @@ export default function Editor({ file, vim, inspect, onDraft, onSave, onExit }: 
       wordWrap: 'on',
       accessibilitySupport: 'auto',
       contextmenu: false,
+      quickSuggestions: { other: true, comments: false, strings: true },
+      suggestOnTriggerCharacters: true,
+      wordBasedSuggestions: 'off',
+      tabCompletion: 'on',
     });
     editor.current = instance;
     exiting.current = false;

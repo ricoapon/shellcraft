@@ -313,20 +313,37 @@ export class GameEngine {
         this.campaign.progress.active?.discovered.filter((id) =>
           this.world.host.neighbors.has(id),
         ) ?? [],
-      paths: (prefix, workspace) => {
+      missions: this.system.mission
+        .list()
+        .filter((level) => level.available)
+        .map((level) => level.id),
+      paths: (prefix, target, sourcePath) => {
         try {
           const slash = prefix.lastIndexOf('/'),
             parent = slash < 0 ? '.' : prefix.slice(0, slash + 1) || '/';
+          const workspace = target.scope !== 'host';
           const fs = workspace ? this.world.home.filesystem : this.world.session.filesystem,
-            cwd = workspace ? '/home' : this.world.session.workingDirectory;
+            cwd =
+              target.scope === 'module' && sourcePath.startsWith('/home/')
+                ? sourcePath.slice(0, sourcePath.lastIndexOf('/'))
+                : workspace
+                  ? '/home'
+                  : this.world.session.workingDirectory;
           return fs
             .list(parent, cwd)
-            .map(
+            .filter(
               (entry) =>
+                entry.type === 'directory' ||
+                (target.entries !== 'directory' &&
+                  (!target.extension || entry.name.endsWith(target.extension))),
+            )
+            .map((entry) => ({
+              path:
                 (slash < 0 ? '' : prefix.slice(0, slash + 1)) +
                 entry.name +
                 (entry.type === 'directory' ? '/' : ''),
-            );
+              type: entry.type,
+            }));
         } catch {
           return [];
         }

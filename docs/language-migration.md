@@ -10,6 +10,8 @@ Each numbered stage is a separate commit. Work directly on master.
 
 6. **Browser-free testing.** Add a real-engine command/script driver with JSON-lines sessions, explicit test saves, structured errors, and shared diagnostics. Browser storage is never used.
 
+7. **Shared contextual completion.** Add lexer-based caret completion and explicit argument metadata to the command signatures. Reuse replacement ranges and quoting in terminal suggestions and Monaco. Keep host discovery read-only and preserve multiline and Vim shortcuts.
+
 ## Required invariants
 
 - Commands use the shared registry and `CommandSystem`; no interpreter dependency on `GameEngine` or mutable world internals.
@@ -30,4 +32,4 @@ Exercise overloads, malformed source, imports, recursion, scope, return types, r
 - Tests exercise every level on five fresh cases and an uninterrupted whole-campaign program, without adding the future master unlock.
 - The production-browser smoke check covers keyboard shell input, multiline blocks, mission transitions, and Monaco save/exit/run, with no page errors.
 - The browser-free driver covers persistent requests, script scope, diagnostics, structured errors, and explicit test-save persistence.
-- Final validation: 97 tests pass; typecheck, formatting, and production build pass. The production build reports Monaco chunk-size warnings. Browser keyboard/editor smoke checks complete without page errors.
+- Contextual-completion validation: 104 tests pass; typecheck, formatting, and production build pass. The browser-free driver successfully starts files-1 and lists its evidence. Browser checks cover Tab and mouse acceptance, arrow selection, Esc dismissal, Ctrl+Space, quoted directory paths, caret edits preserving later source, Shift+Enter, Monaco nested path completion and save/run, and Vim discard/exit, without page errors. The production build reports Monaco chunk-size warnings.

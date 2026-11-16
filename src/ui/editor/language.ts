@@ -56,23 +56,49 @@ monaco.languages.setMonarchTokensProvider('shellcraft', {
   },
 });
 monaco.languages.registerCompletionItemProvider('shellcraft', {
-  triggerCharacters: ['$', '.', '/', ' '],
-  async provideCompletionItems(model, position) {
+  triggerCharacters: ['$', '.', '/', ' ', '"', "'"],
+  async provideCompletionItems(model, position, _context, cancellation) {
     if (!inspector) return { suggestions: [] };
-    const info = await inspector(model.getValue(), model.getOffsetAt(position)),
-      start = model.getPositionAt(info.replaceFrom);
+    const source = model.getValue(),
+      version = model.getVersionId(),
+      offset = model.getOffsetAt(position);
+    const info = await inspector(source, offset);
+    if (
+      cancellation.isCancellationRequested ||
+      model.isDisposed() ||
+      model.getVersionId() !== version
+    )
+      return { suggestions: [] };
+    const start = model.getPositionAt(info.replaceFrom),
+      end = model.getPositionAt(info.replaceTo);
+    const kinds = {
+      command: monaco.languages.CompletionItemKind.Function,
+      variable: monaco.languages.CompletionItemKind.Variable,
+      field: monaco.languages.CompletionItemKind.Field,
+      type: monaco.languages.CompletionItemKind.Class,
+      file: monaco.languages.CompletionItemKind.File,
+      directory: monaco.languages.CompletionItemKind.Folder,
+      value: monaco.languages.CompletionItemKind.Value,
+    };
+    const escapeSnippet = (text: string) => text.replace(/[\\$}]/g, (char) => '\\' + char);
     return {
+      incomplete: true,
       suggestions: info.completions.map((c) => ({
         label: c.label,
-        insertText: c.insertText,
         detail: c.detail,
-        kind: monaco.languages.CompletionItemKind.Function,
-        range: new monaco.Range(
-          start.lineNumber,
-          start.column,
-          position.lineNumber,
-          position.column,
-        ),
+        kind: kinds[c.kind ?? 'value'],
+        insertText:
+          c.cursorOffset === undefined
+            ? c.insertText
+            : escapeSnippet(c.insertText.slice(0, c.cursorOffset)) +
+              '$0' +
+              escapeSnippet(c.insertText.slice(c.cursorOffset)),
+        insertTextRules:
+          c.cursorOffset === undefined
+            ? undefined
+            : monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        filterText: c.insertText,
+        range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column),
       })),
     };
   },

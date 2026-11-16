@@ -30,4 +30,8 @@ Requests receive one JSON response each. Errors do not end the session; closing 
 
 AI tooling can keep this process open to inspect output and issue follow-up commands. Tests may also import createTestSession from scripts/test-game.mjs and call request/close directly.
 
+To inspect completion at a caret, send `{"analyze":{"source":"echo (cat /no); echo kept","offset":13,"path":"<terminal>"}}`. Completion returns `replaceFrom`/`replaceTo` offsets plus insertion text and optional directory cursor offsets. Check that accepting a suggestion preserves later arguments and statements. Automated coverage includes quoting, path scopes, module-relative paths, argument metadata, and discovery without side effects.
+
+Browser completion checks: type a command prefix, accept with Tab, select with Up/Down or Shift+Tab, and dismiss with Esc. Move into an earlier argument and confirm later source survives acceptance. Check quoted directory traversal, Ctrl+Space, Shift+Enter multiline input, history after dismissal, and mouse acceptance without losing terminal focus. In Monaco check command/path suggestions, Tab acceptance, and the normal save/discard and Vim exit shortcuts.
+
 Use a browser for layout, focus, keyboard shortcuts, terminal paste/input, Monaco completion interaction, and other UI behavior. Language, command, mission and save behavior can usually be tested with the driver or Vitest.

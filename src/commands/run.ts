@@ -7,7 +7,15 @@ export const run: Command = {
   details:
     'Executes .sc source in a fresh variable scope. Commands and navigation behave exactly as in the shell.',
   example: 'run /home/solve.sc',
-  signatures: [{ parameters: [string], rest: string, result: nothing, terminalOnly: true }],
+  signatures: [
+    {
+      completion: [{ kind: 'path', scope: 'workspace', extension: '.sc' }],
+      parameters: [string],
+      rest: string,
+      result: nothing,
+      terminalOnly: true,
+    },
+  ],
   execute: async (args, system) => {
     const [path, ...values] = stringArguments(args);
     await system.scripts.run(path, values);

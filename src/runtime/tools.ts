@@ -1,3 +1,6 @@
+import { completionsAt } from './completion';
+import type { CompletionItem } from './completion';
+import type { CompletionTarget } from './types';
 import { Checker } from './checker';
 import type { CheckedProgram, Symbols } from './checker';
 import { LanguageError, list, typeName } from './types';
@@ -16,9 +19,10 @@ export interface ToolSymbol {
 }
 export interface LanguageTools {
   diagnostics: { message: string; line: number; column: number }[];
-  completions: { label: string; insertText: string; detail: string }[];
+  completions: CompletionItem[];
   symbols: ToolSymbol[];
   replaceFrom: number;
+  replaceTo: number;
   hover?: string;
   signature?: string;
   references?: { offset: number; length: number }[];
@@ -28,7 +32,12 @@ export interface ToolContext {
   analyze(source: string, path: string, terminal: boolean): CheckedProgram;
   declarations: Symbols;
   commands: readonly { name: string; description?: string; usage?: string }[];
-  paths(prefix: string, workspace: boolean): readonly string[];
+  paths(
+    prefix: string,
+    target: Extract<CompletionTarget, { kind: 'path' }>,
+    sourcePath: string,
+  ): readonly { path: string; type: 'file' | 'directory' }[];
+  missions: readonly string[];
   hosts: readonly string[];
 }
 export function languageTools(
@@ -44,6 +53,7 @@ export function languageTools(
     completions: [],
     symbols: [],
     replaceFrom: offset,
+    replaceTo: offset,
   };
   let checked: CheckedProgram | undefined;
   try {
@@ -209,74 +219,17 @@ export function languageTools(
       (s.kind !== 'variable' || s.offset < offset || s.source !== path) &&
       !(inFunction && s.kind === 'variable' && s.start === 0),
   );
-  const before = source.slice(0, offset),
-    word = /[\w$./-]*$/.exec(before)?.[0] ?? '';
-  result.replaceFrom = offset - word.length;
-  const add = (label: string, detail: string, insertText = label) => {
-    if (label.startsWith(word) || word === '' || (word.startsWith('$') && label.startsWith(word)))
-      result.completions.push({ label, insertText, detail });
-  };
-  const field = /\$([A-Za-z_]\w*)((?:\[\d+\]|\.[A-Za-z_]\w*)*)\.([A-Za-z_]\w*)?$/.exec(before);
-  if (field) {
-    let type = visible.filter((s) => s.name === field[1] && s.kind === 'variable').at(-1)?.type;
-    for (const access of field[2].matchAll(/\[(\d+)\]|\.([A-Za-z_]\w*)/g)) {
-      if (access[1] !== undefined) type = type?.kind === 'list' ? type.element : undefined;
-      else type = type?.kind === 'record' ? type.fields[access[2]] : undefined;
-    }
-    const part = field[3] ?? '';
-    result.replaceFrom = offset - part.length;
-    if (type?.kind === 'record')
-      for (const [name, t] of Object.entries(type.fields))
-        if (name.startsWith(part))
-          result.completions.push({ label: name, insertText: name, detail: typeName(t) });
-  } else {
-    for (const command of context.commands)
-      add(command.name, command.usage ?? command.description ?? 'command');
-    for (const symbol of visible)
-      add(symbol.kind === 'variable' ? '$' + symbol.name : symbol.name, symbol.detail);
-    for (const name of [
-      'let',
-      'mut',
-      'if',
-      'else',
-      'for',
-      'while',
-      'def',
-      'type',
-      'use',
-      'return',
-      'break',
-      'continue',
-      'string',
-      'number',
-      'bool',
-      'void',
-      'list',
-    ])
-      add(name, 'language');
-    const line = before
-      .slice(Math.max(before.lastIndexOf(';'), before.lastIndexOf('\n')) + 1)
-      .trimStart();
-    if (/^\s*(ssh|neighbors)\s+/.test(line))
-      for (const id of context.hosts) add(id, 'discovered host');
-    const commandName = /^([\w-]+)/.exec(line)?.[1],
-      command = context.commands.find((c) => c.name === commandName);
-    if (command?.usage?.includes('path') || commandName === 'use') {
-      const workspace = ['edit', 'vim', 'run', 'use'].includes(commandName ?? '');
-      for (const candidate of context.paths(word, workspace))
-        add(candidate, 'path', /\s/.test(candidate) ? JSON.stringify(candidate) : candidate);
-    }
-    const native = context.host.commands().find((c) => c.name === commandName);
-    const words = line.split(/\s+/);
-    for (const sig of native?.signatures ?? [])
-      if (sig.prefix?.length) {
-        const n = words.length - 2;
-        if (n >= 0 && sig.prefix.slice(0, n).every((v, i) => v === words[i + 1]) && sig.prefix[n])
-          add(sig.prefix[n], 'subcommand');
-      }
-  }
-  const unique = new Map(result.completions.map((c) => [c.label, c]));
-  result.completions = [...unique.values()];
+  const before = source.slice(0, offset);
+  Object.assign(
+    result,
+    completionsAt(source, path, offset, terminal, visible, {
+      commands: context.commands,
+      natives: context.host.commands(),
+      paths: context.paths,
+      hosts: context.hosts,
+      missions: context.missions,
+    }),
+  );
   const reference = /\$?([A-Za-z_][\w-]*)$/.exec(before)?.[1];
   if (reference)
     result.hover =

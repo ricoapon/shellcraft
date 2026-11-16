@@ -5,7 +5,14 @@ export const guide: Command = {
   name: 'guide',
   usage: 'guide [topic|all]',
   description: 'Read the operator guide.',
-  signatures: [{ parameters: [string], minimum: 0, result: list(string) }],
+  signatures: [
+    {
+      completion: [{ kind: 'choices', values: ['all', ...guideSections.map((s) => s.id)] }],
+      parameters: [string],
+      minimum: 0,
+      result: list(string),
+    },
+  ],
   execute(args) {
     const [topic] = stringArguments(args);
     if (!topic)

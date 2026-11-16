@@ -5,7 +5,9 @@ export const help: Command = {
   description: 'List available commands.',
   usage: 'help [command]',
   details: 'Only available commands appear. Detailed help shows usage, details, and examples.',
-  signatures: [{ parameters: [string], minimum: 0, result: list(string) }],
+  signatures: [
+    { completion: [{ kind: 'command' }], parameters: [string], minimum: 0, result: list(string) },
+  ],
   execute(args, system) {
     const [name] = stringArguments(args),
       commands = system.commands.list();

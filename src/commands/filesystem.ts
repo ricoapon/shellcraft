@@ -14,7 +14,14 @@ export const filesystemCommands: readonly Command[] = [
     description: 'List file records.',
     details:
       'List immediate children, including dotfiles, sorted by name. A file path returns a one-element list.',
-    signatures: [{ parameters: [string], minimum: 0, result: list(fileType) }],
+    signatures: [
+      {
+        completion: [{ kind: 'path', scope: 'host' }],
+        parameters: [string],
+        minimum: 0,
+        result: list(fileType),
+      },
+    ],
     execute(args, system) {
       const [path = '.'] = stringArguments(args),
         entry = system.filesystem.stat(path),
@@ -30,7 +37,13 @@ export const filesystemCommands: readonly Command[] = [
     name: 'cd',
     usage: 'cd <path>',
     description: 'Change the current directory.',
-    signatures: [{ parameters: [string], result: nothing }],
+    signatures: [
+      {
+        completion: [{ kind: 'path', scope: 'host', entries: 'directory' }],
+        parameters: [string],
+        result: nothing,
+      },
+    ],
     execute(args, system) {
       system.filesystem.cd(stringArguments(args)[0]);
       return {};
@@ -40,7 +53,13 @@ export const filesystemCommands: readonly Command[] = [
     name: 'cat',
     usage: 'cat <path>',
     description: 'Read file text.',
-    signatures: [{ parameters: [string], result: string }],
+    signatures: [
+      {
+        completion: [{ kind: 'path', scope: 'host', entries: 'file' }],
+        parameters: [string],
+        result: string,
+      },
+    ],
     execute: (args, system) => ({ value: system.filesystem.read(stringArguments(args)[0]) }),
   },
   {
@@ -48,7 +67,13 @@ export const filesystemCommands: readonly Command[] = [
     usage: 'write <path> <text>',
     description: 'Create or replace a file.',
     details: 'The parent must exist. Level evidence is read-only. Quote text containing spaces.',
-    signatures: [{ parameters: [string, string], result: nothing }],
+    signatures: [
+      {
+        completion: [{ kind: 'path', scope: 'host' }],
+        parameters: [string, string],
+        result: nothing,
+      },
+    ],
     execute(args, system) {
       const [path, text] = stringArguments(args);
       system.filesystem.write(path, text);
@@ -59,7 +84,13 @@ export const filesystemCommands: readonly Command[] = [
     name: 'mkdir',
     usage: 'mkdir <path>',
     description: 'Create a directory.',
-    signatures: [{ parameters: [string], result: nothing }],
+    signatures: [
+      {
+        completion: [{ kind: 'path', scope: 'host', entries: 'directory' }],
+        parameters: [string],
+        result: nothing,
+      },
+    ],
     execute(args, system) {
       system.filesystem.mkdir(stringArguments(args)[0]);
       return {};
@@ -70,7 +101,13 @@ export const filesystemCommands: readonly Command[] = [
     usage: 'rm <path>',
     description: 'Remove a file.',
     details: 'Accepts one file; directories are rejected.',
-    signatures: [{ parameters: [string], result: nothing }],
+    signatures: [
+      {
+        completion: [{ kind: 'path', scope: 'host', entries: 'file' }],
+        parameters: [string],
+        result: nothing,
+      },
+    ],
     execute(args, system) {
       system.filesystem.remove(stringArguments(args)[0]);
       return {};

@@ -26,6 +26,8 @@ Regex uses RE2JS (version locked in package-lock.json), not native JavaScript Re
 
 Readline uses the shared parser to continue incomplete statements and blocks. The worker supplies analysis and completion without executing game commands or saving. Monaco uses those services for diagnostics, types, signatures, references, and variable rename. The terminal has shared lexical highlighting and completion. Existing Vim and keyboard save/exit flows remain.
 
+Cursor-aware completion in src/runtime/completion.ts uses the Chevrotain lexer and explicit per-signature argument targets. Suggestions carry a replacement range, insertion text, kind, and optional directory cursor position, shared by Readline and Monaco. Nested calls, quoted paths, source-relative imports, workspace paths, mission IDs, and discovered neighboring hosts use read-only tooling. Requests never execute unfinished source. Terminal completion captures its keys before xterm, preserving Readline's Shift+Enter handler; stale asynchronous responses are discarded in both interfaces.
+
 Version 4 saves contain world/progression/player data/settings, excluding output, history, variables and function registrations. Existing player files and drafts are preserved, including legacy .js files; only .sc files execute. A language-installation marker installs missing skeletons without overwriting user files. Old campaign saves retain durable files while retired progression is migrated.
 
 Starting/resetting/leaving a level clears terminal output/history and changes context styling. That UI transition does not reset language state. Reload starts a fresh REPL with a context introduction.

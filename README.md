@@ -28,7 +28,7 @@ Commands return structured values. Uncaptured values are rendered; assignment an
 
 Use `edit /home/solve.sc`, then `run /home/solve.sc`. `use /home/lib.sc` imports declaration-only libraries. Interactive variables/functions persist in memory; each script gets a fresh scope. Scripts may start and leave missions without losing their own execution state. Ordinary navigation persists exactly as it does manually.
 
-The editor provides highlighting, completion, diagnostics, hover, signatures, variable rename and definition links. Normal editing uses Ctrl+S to save/exit, Ctrl+Q to discard, Ctrl+Enter to save/exit/run. Vim uses :w, :q, :q!, :wq/:x and :run. The terminal supports multiline input, syntax highlighting, and Tab completion.
+The editor provides highlighting, completion, diagnostics, hover, signatures, variable rename and definition links. Normal editing uses Ctrl+S to save/exit, Ctrl+Q to discard, Ctrl+Enter to save/exit/run. Vim uses :w, :q, :q!, :wq/:x and :run. The terminal supports multiline input and syntax highlighting. Suggestions appear as you type; Tab accepts, Up/Down selects, and Esc dismisses. Ctrl+Space requests suggestions explicitly. Enter submits the source. Terminal and editor completion share commands, subcommands, variables, types, fields, and argument suggestions, including quoted paths at the caret. Filesystem commands complete the current host; edit/vim/run complete personal workspace paths and use resolves module paths relative to the source file. Host suggestions include only discovered neighbors.
 
 See [language specification](docs/language-spec.md) and `guide` for syntax and small examples.
 
