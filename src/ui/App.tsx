@@ -178,6 +178,16 @@ export function App() {
                   initialEntries={entries}
                   getLocation={() => location.current}
                   onCommand={command}
+                  inspect={async (source, offset) =>
+                    (
+                      await request('language', {
+                        source,
+                        offset,
+                        path: '<terminal>',
+                        terminal: true,
+                      })
+                    ).language!
+                  }
                   onOpenSource={(path, line) => send('openEditor', { path, line })}
                 />
               ))}
@@ -192,6 +202,16 @@ export function App() {
                     key={view.settings.editor.path}
                     file={view.settings.editor}
                     vim={view.settings.vim}
+                    inspect={async (source, offset) =>
+                      (
+                        await request('language', {
+                          source,
+                          offset,
+                          path: view.settings.editor!.path,
+                          terminal: false,
+                        })
+                      ).language!
+                    }
                     onDraft={(text) => send('editorDraft', text)}
                     onSave={async (text) => {
                       await request('saveEditor', text);

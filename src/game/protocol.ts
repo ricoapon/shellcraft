@@ -1,6 +1,7 @@
 import type { EngineReply, EngineSnapshot, EngineView } from './engine';
 import type { TranscriptEntry } from '../core/shell';
 export type RequestType =
+  | 'language'
   | 'init'
   | 'command'
   | 'editorDraft'
@@ -15,6 +16,7 @@ export interface GameRequest {
   payload?: unknown;
 }
 export interface GameResponse {
+  language?: import('../runtime/tools').LanguageTools;
   id?: number;
   ok: boolean;
   error?: string;

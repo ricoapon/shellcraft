@@ -47,6 +47,16 @@ async function handle(request: GameRequest) {
     }
     if (!engine) throw new Error('Workstation is loading.');
     const payload = request.payload as Record<string, unknown> | undefined;
+    if (request.type === 'language') {
+      const language = engine.languageTools(
+        String(payload?.source ?? ''),
+        String(payload?.path ?? '<terminal>'),
+        Number(payload?.offset ?? 0),
+        payload?.terminal === true,
+      );
+      post({ id: request.id, ok: true, language, warning });
+      return;
+    }
     let reply,
       resetTerminal = false;
     switch (request.type) {

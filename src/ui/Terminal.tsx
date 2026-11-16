@@ -5,12 +5,16 @@ import { Readline } from 'xterm-readline';
 
 import type { TranscriptEntry } from '../core/shell';
 import type { EngineReply } from '../game/engine';
+import type { LanguageTools } from '../runtime/tools';
+import { isIncomplete } from '../runtime/syntax';
+import { highlightSource } from '../runtime/highlight';
 import '@xterm/xterm/css/xterm.css';
 
 interface Props {
   initialEntries: readonly TranscriptEntry[];
   getLocation(): { host: string; directory: string; level?: string };
   onCommand(input: string): Promise<EngineReply>;
+  inspect(source: string, offset: number): Promise<LanguageTools>;
   onOpenSource(path: string, line: number): void;
 }
 
@@ -24,10 +28,11 @@ function plainText(text: string): string {
   return text.replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '').replace(/\n/g, '\r\n');
 }
 
-export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource }: Props) {
+export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource, inspect }: Props) {
   const host = useRef<HTMLDivElement>(null);
   // Startup data is replayed once; React updates must not reset the live terminal.
   const savedEntries = useRef(initialEntries);
+  const inspectSource = useEffectEvent(inspect);
   const execute = useEffectEvent(onCommand);
   const location = useEffectEvent(getLocation);
   const openSource = useEffectEvent(onOpenSource);
@@ -52,9 +57,28 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource 
       const highlightPrompt = (prompt: string) =>
         `${location().level ? '\x1b[38;2;199;165;235m' : '\x1b[38;2;143;219;171m'}${prompt}\x1b[39m`;
       readline.setHighlighter({
-        highlight: (line) => line,
+        highlight: (line) => highlightSource(line),
         highlightChar: () => false,
         highlightPrompt,
+      });
+      readline.setCheckHandler((source) => !isIncomplete(source));
+      terminal.attachCustomKeyEventHandler((event) => {
+        if (event.key !== 'Tab' || event.type !== 'keydown') return true;
+        event.preventDefault();
+        const source = readline.getLine();
+        void inspectSource(source, source.length)
+          .then((info) => {
+            if (readline.getLine() !== source) return;
+            if (info.completions.length === 1) {
+              readline.updateLine(
+                source.slice(0, info.replaceFrom) + info.completions[0].insertText,
+              );
+            } else if (info.completions.length) {
+              readline.println(info.completions.map((c) => c.label).join('  '));
+            }
+          })
+          .catch(() => {});
+        return false;
       });
       terminal.loadAddon(fit);
       terminal.loadAddon(readline);
@@ -65,7 +89,7 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource 
         provideLinks(lineNumber, callback) {
           const text =
             terminal.buffer.active.getLine(lineNumber - 1)?.translateToString(true) ?? '';
-          const matches = [...text.matchAll(/(\/home\/[^():\n]*?\.m?js):(\d+)/g)];
+          const matches = [...text.matchAll(/(\/home\/[^():\n]*?\.sc):(\d+)/g)];
           callback(
             matches.map((match) => ({
               text: match[0],

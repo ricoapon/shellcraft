@@ -1,8 +1,8 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import * as monaco from 'monaco-editor';
-import { conf, language } from 'monaco-editor/languages/definitions/javascript/javascript.js';
+import { setInspector } from './language';
+import type { Inspect } from './language';
 import EditorWorker from 'monaco-editor/editor/editor.worker.js?worker';
-import TypeScriptWorker from 'monaco-editor/language/typescript/ts.worker.js?worker';
 import JsonWorker from 'monaco-editor/language/json/json.worker.js?worker';
 import type { WorkstationSettings } from '../../game/engine';
 
@@ -10,15 +10,11 @@ const vimCommands = new WeakMap<object, (name: string, args: string) => void>();
 
 (globalThis as typeof globalThis & { MonacoEnvironment: unknown }).MonacoEnvironment = {
   getWorker(_id: string, label: string) {
-    if (label === 'javascript' || label === 'typescript') return new TypeScriptWorker();
     if (label === 'json') return new JsonWorker();
     return new EditorWorker();
   },
 };
 
-// Load Monaco's JavaScript grammar eagerly with the editor.
-monaco.languages.setLanguageConfiguration('javascript', conf);
-monaco.languages.setMonarchTokensProvider('javascript', language);
 monaco.editor.defineTheme('shellcraft', {
   base: 'vs-dark',
   inherit: true,
@@ -40,12 +36,13 @@ monaco.editor.defineTheme('shellcraft', {
 interface Props {
   file: NonNullable<WorkstationSettings['editor']>;
   vim: boolean;
+  inspect: Inspect;
   onDraft(text: string): void;
   onSave(text: string): Promise<void>;
   onExit(action: 'save' | 'discard' | 'run', text: string): Promise<void>;
 }
 
-export default function Editor({ file, vim, onDraft, onSave, onExit }: Props) {
+export default function Editor({ file, vim, inspect, onDraft, onSave, onExit }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const status = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -53,6 +50,7 @@ export default function Editor({ file, vim, onDraft, onSave, onExit }: Props) {
   const saved = useRef(file.saved);
   const [dirty, setDirty] = useState(file.draft !== file.saved);
   const [message, setMessage] = useState('');
+  const inspectSource = useEffectEvent(inspect);
   const draft = useEffectEvent(onDraft);
   const exit = useEffectEvent(onExit);
   const save = useEffectEvent(onSave);
@@ -60,11 +58,7 @@ export default function Editor({ file, vim, onDraft, onSave, onExit }: Props) {
   useEffect(() => {
     const model = monaco.editor.createModel(
       file.draft,
-      /\.[cm]?js$/.test(file.path)
-        ? 'javascript'
-        : file.path.endsWith('.json')
-          ? 'json'
-          : 'markdown',
+      file.path.endsWith('.sc') ? 'shellcraft' : file.path.endsWith('.json') ? 'json' : 'markdown',
       monaco.Uri.parse('file://' + file.path),
     );
     const instance = monaco.editor.create(container.current!, {
@@ -81,7 +75,36 @@ export default function Editor({ file, vim, onDraft, onSave, onExit }: Props) {
     });
     editor.current = instance;
     exiting.current = false;
+    setInspector(inspectSource);
+    let diagnosticsTimer: ReturnType<typeof setTimeout> | undefined;
+    let closed = false;
+    const diagnose = () => {
+      clearTimeout(diagnosticsTimer);
+      if (!file.path.endsWith('.sc')) return;
+      const version = model.getVersionId();
+      diagnosticsTimer = setTimeout(() => {
+        void inspectSource(model.getValue(), model.getValueLength())
+          .then((info) => {
+            if (closed || model.isDisposed() || model.getVersionId() !== version) return;
+            monaco.editor.setModelMarkers(
+              model,
+              'shellcraft',
+              info.diagnostics.map((d) => ({
+                severity: monaco.MarkerSeverity.Error,
+                message: d.message,
+                startLineNumber: d.line,
+                startColumn: d.column,
+                endLineNumber: d.line,
+                endColumn: d.column + 1,
+              })),
+            );
+          })
+          .catch(() => {});
+      }, 200);
+    };
+    diagnose();
     const subscription = instance.onDidChangeModelContent(() => {
+      diagnose();
       setDirty(instance.getValue() !== saved.current);
       draft(instance.getValue());
     });
@@ -109,6 +132,9 @@ export default function Editor({ file, vim, onDraft, onSave, onExit }: Props) {
     }
     instance.focus();
     return () => {
+      closed = true;
+      clearTimeout(diagnosticsTimer);
+      setInspector(undefined);
       subscription.dispose();
       instance.setModel(null);
       instance.dispose();

@@ -1,4 +1,5 @@
 import { Shell } from '../core/shell';
+import { languageTools } from '../runtime/tools';
 import { resolvePath } from '../core/path';
 import { builtinCommands } from '../commands';
 import type { CommandSystem } from '../commands/system';
@@ -267,6 +268,37 @@ export class GameEngine {
       : [
           'Practice case passed. Submit without a seed to verify fresh instances and earn the automation star.',
         ];
+  }
+  languageTools(source: string, path: string, offset: number, terminal: boolean) {
+    return languageTools(source, path, offset, terminal, {
+      host: this.terminal.language.host,
+      declarations: this.terminal.language.declarations,
+      analyze: (source, path, terminal) =>
+        this.terminal.language.analyze(source, path, terminal ? 'terminal' : 'script'),
+      commands: this.terminal.available(),
+      hosts:
+        this.campaign.progress.active?.discovered.filter((id) =>
+          this.world.host.neighbors.has(id),
+        ) ?? [],
+      paths: (prefix, workspace) => {
+        try {
+          const slash = prefix.lastIndexOf('/'),
+            parent = slash < 0 ? '.' : prefix.slice(0, slash + 1) || '/';
+          const fs = workspace ? this.world.home.filesystem : this.world.session.filesystem,
+            cwd = workspace ? '/home' : this.world.session.workingDirectory;
+          return fs
+            .list(parent, cwd)
+            .map(
+              (entry) =>
+                (slash < 0 ? '' : prefix.slice(0, slash + 1)) +
+                entry.name +
+                (entry.type === 'directory' ? '/' : ''),
+            );
+        } catch {
+          return [];
+        }
+      },
+    });
   }
   view(): EngineView {
     return structuredClone({
