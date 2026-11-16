@@ -29,7 +29,7 @@ it('extends ambiguous matches only to their common prefix', () => {
   expect(terminalCompletionEdit('e', 1, { ...info, completions: [] })).toBeUndefined();
   expect(
     terminalCompletionEdit('e', 1, { ...info, completions: info.completions.slice(0, 1) }),
-  ).toEqual({ source: 'eee', cursor: 3 });
+  ).toEqual({ source: 'eee ', cursor: 4 });
 });
 it('extends path prefixes with consistent quoting and preserves the caret and later source', () => {
   const g = fixture(),

@@ -328,7 +328,20 @@ export function terminalCompletionEdit(
 ): { source: string; cursor: number } | undefined {
   const [first, ...others] = info.completions;
   if (!first) return;
-  if (!others.length) return completionEdit(source, info, first);
+  if (!others.length) {
+    const edit = completionEdit(source, info, first);
+    if (first.kind === 'directory' || edit.cursor < info.replaceFrom + first.insertText.length)
+      return edit;
+    const next = edit.source[edit.cursor];
+    if (next !== undefined && /\s/.test(next)) {
+      if (next === ' ' || next === '\t') edit.cursor++;
+      return edit;
+    }
+    return {
+      source: edit.source.slice(0, edit.cursor) + ' ' + edit.source.slice(edit.cursor),
+      cursor: edit.cursor + 1,
+    };
+  }
   let prefix = first.label;
   for (const item of others) {
     let length = 0;
