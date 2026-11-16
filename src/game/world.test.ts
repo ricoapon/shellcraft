@@ -1,31 +1,20 @@
 import { expect, it } from 'vitest';
 import { World } from './world';
-import { VirtualFileSystem } from '../core/filesystem';
-
-it('preserves per-connection directories and restores nested connections', () => {
-  const world = new World();
-  const remote = new VirtualFileSystem();
-  remote.mkdir('/logs');
-  world.addHost({ id: 'server', filesystem: remote.snapshot(), neighbors: [] });
-  world.home.neighbors.add('server');
-  world.connect('server');
-  world.session.changeDirectory('/logs');
-  world.connect('home');
-  world.exit();
-  expect(world.session.workingDirectory).toBe('/logs');
+import { Campaign } from './campaign';
+it('separates workspace from level connections and restores level navigation', () => {
+  const world = new World(),
+    campaign = new Campaign(world);
+  campaign.progress.completed = ['files-1', 'files-2'];
+  campaign.start('network-1', 1);
+  expect(world.host.id).toBe('gateway');
+  world.connect('node-1');
+  world.session.changeDirectory('/notes');
   const restored = new World(undefined, world.snapshot());
-  expect(restored.host.id).toBe('server');
-  expect(restored.session.workingDirectory).toBe('/logs');
+  expect(restored.host.id).toBe('node-1');
+  expect(restored.session.workingDirectory).toBe('/notes');
   restored.exit();
-  expect(restored.host.id).toBe('home');
-});
-
-it('rejects unreachable hosts and preserves home data when resetting a mission', () => {
-  const world = new World();
-  world.home.filesystem.writeFile('/home/tool.js', 'player code');
-  world.addHost({ id: 'hidden', filesystem: new VirtualFileSystem().snapshot(), neighbors: [] });
-  expect(() => world.connect('hidden')).toThrow('not reachable');
-  world.clearRemoteHosts();
-  expect(world.home.filesystem.readFile('/home/tool.js')).toBe('player code');
-  expect(world.hosts.size).toBe(1);
+  expect(restored.host.id).toBe('gateway');
+  expect(() => restored.exit()).toThrow('mission leave');
+  expect(() => restored.connect('home')).toThrow('not adjacent');
+  expect(restored.snapshot().hosts.every((host) => !host.neighbors.includes('home'))).toBe(true);
 });

@@ -6,10 +6,7 @@
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
-    "cytoscape": "^3.35.0",
     "dexie": "^4.4.7",
-    "dompurify": "^3.4.18",
-    "mermaid": "^12.3.0",
     "monaco-editor": "^0.56.0",
     "monaco-vim": "^0.4.4",
     "quickjs-emscripten": "^0.32.0",
@@ -18,7 +15,6 @@
     "xterm-readline": "^2.0.0"
   },
   "devDependencies": {
-    "@types/cytoscape": "^3.21.9",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.0",
@@ -35,8 +31,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write src scripts README.md docs/implementation.md vite.config.ts",
-    "format:check": "prettier --check src scripts README.md docs/implementation.md vite.config.ts",
+    "format": "prettier --write src tests scripts README.md AGENTS.md docs/implementation.md docs/player-guidance-review.md vite.config.ts",
+    "format:check": "prettier --check src tests scripts README.md AGENTS.md docs/implementation.md docs/player-guidance-review.md vite.config.ts",
     "make:showcase": "node scripts/create-showcase.mjs"
   },
   "overrides": {

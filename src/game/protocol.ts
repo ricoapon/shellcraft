@@ -1,6 +1,5 @@
 import type { EngineReply, EngineSnapshot, EngineView } from './engine';
 import type { TranscriptEntry } from '../core/shell';
-
 export type RequestType =
   | 'init'
   | 'command'
@@ -8,9 +7,6 @@ export type RequestType =
   | 'saveEditor'
   | 'closeEditor'
   | 'openEditor'
-  | 'layout'
-  | 'activePanel'
-  | 'interact'
   | 'export'
   | 'import';
 export interface GameRequest {
@@ -26,6 +22,5 @@ export interface GameResponse {
   view?: EngineView;
   reply?: EngineReply;
   entries?: readonly TranscriptEntry[];
-  notice?: readonly string[];
   save?: EngineSnapshot;
 }

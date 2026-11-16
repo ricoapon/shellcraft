@@ -1,12 +1,11 @@
 import { requireArguments, type Command } from './command';
-
 export const run: Command = {
   name: 'run',
-  usage: 'run <home-path> [args...]',
-  description: 'Run a saved script.',
+  usage: 'run <workspace-path> [args...]',
+  description: 'Run your saved JavaScript.',
   details:
-    'Run a JavaScript module from /home, even while connected remotely. Export main(ctx,args); arguments after the path are forwarded as strings. Imports resolve within /home. Requires the scripting upgrade.',
-  example: 'run /home/scripts/search.js KEY /archive',
+    'Run a module from your personal /home code workspace. Export main(ctx,args). ctx.fs reads the current host. Imports resolve only within /home. Scripting is available from the start.',
+  example: 'run /home/solve.js',
   unlocked: (system) => system.capabilities.has('scripting'),
   execute(args, system) {
     requireArguments(args, 1, run.usage!, 100);

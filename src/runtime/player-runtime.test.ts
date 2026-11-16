@@ -42,25 +42,3 @@ it('interrupts infinite loops and does not expose browser or Node globals', asyn
     module.dispose();
   }
 });
-
-it('retains command closures and serializes screen event callbacks as opaque IDs', async () => {
-  const module = await PlayerModule.create(
-    '/startup.js',
-    () => `
-    export function setup(ctx){ctx.commands.register('greet', args=>ctx.print(args[0]));}
-    export function render(view){return view.button({text:'Click',onClick:()=>ctx.print('clicked')});}
-  `,
-    () => null,
-  );
-  try {
-    module.invoke('setup');
-    expect(module.registrations().commands[0].name).toBe('greet');
-    module.command('greet', ['hello']);
-    expect(module.render(undefined, {}).onClick).toBe('view:handler-0');
-    module.interact('view:handler-0', null);
-    module.render(undefined, {}, 'second-panel');
-    module.interact('view:handler-0', null);
-  } finally {
-    module.dispose();
-  }
-});

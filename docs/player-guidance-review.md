@@ -1,62 +1,54 @@
-# Player guidance review
+# Files and networking playtest
 
-The terminal remains the entry point. Missions teach the mechanics; there is no
-separate tutorial, onboarding overlay, or additional application UI. This review
-covers the source and expected player route through all fifteen assignments.
+This is the current review checklist. The earlier fifteen-mission sequence is
+retired. No separate tutorial or additional application chrome is needed.
 
-## Always available support
+| Level     | New complication                   | Reusable player knowledge              |
+| --------- | ---------------------------------- | -------------------------------------- |
+| files-1   | Read a named file                  | Read and submit a value                |
+| files-2   | Search a few files                 | Directory listing and iteration        |
+| files-3   | Nested directories                 | Traversal added to search              |
+| files-4   | Multiple password matches          | Filter active records                  |
+| files-5   | Credential referenced by a release | Parse and join evidence                |
+| files-6   | Larger, deeper variations          | Keep and improve the existing solver   |
+| network-1 | Evidence on another host           | Reuse file operations after connecting |
+| network-2 | Branching connections              | Reuse search across hosts              |
+| network-3 | Cycles                             | Add a visited set to exploration       |
+| network-4 | Evidence split across hosts        | Combine traversal and reference lookup |
 
-- A one-time welcome explains the goal, mission rewards, free execution, local
-  saves, and the commands for getting started. Existing profiles receive a
-  returning-player version without being told to restart the campaign. Clearing
-  the terminal keeps it clear after reload.
-- `mission` identifies the current objective or names the next assignment.
-  `mission briefing` explains whether an answer is required; `mission hint`
-  remains free and optional.
-- `guide` lists named topics, including `guide start` and `guide stuck`. Numeric
-  section selection still works. Troubleshooting covers navigation, remote
-  writes, unavailable commands, observations, simulation time, and recovery.
-- Completion names the next assignment and an eligible, affordable upgrade.
-  A new upgrade explains its entry point and relevant guide topic.
-- Live playback reports completion, failure, and disabled controllers in the
-  terminal. Notices are saved in the transcript without reporting every tick.
-  A partially typed command is restored after a notice.
+## First playtest
 
-## Mission route and likely sticking points
+- Begin with a clean profile: only starter skeletons should be present, without
+  installed recursive searches or crawlers. Existing player saves retain files.
+- Enter files-1: old terminal output disappears, the title names the level, the
+  accent becomes purple, and the prompt is on archive rather than home.
+- Complete files-1 manually or automatically. Scripting works from the start;
+  one-star solutions never require a script.
+- Complete files-2 and verify that both files-3 and network-1 are offered.
+- Try reusing a search across files-2, files-3, files-4 and files-6. Each added
+  complication should require an understandable extension or no changes at all.
+- Verify that hints reveal one clue at a time and do not affect stars.
+- Attempt an automation submission containing a hardcoded password: fresh-case
+  verification should fail and report a reproducible seed. A reusable solution
+  should earn two stars without changing the explored instance or personal data.
+- Verify that a practice seed earns no stars, even on success. Second stars must
+  never be prerequisites for ordinary levels.
 
-| Assignment             | Likely sticking point                                                    | Guidance available                                                                                                                          |
-| ---------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 01 Deployment note     | Not knowing how to navigate, read evidence, or submit it                 | Welcome, briefing with `ls`/`cat`/submission syntax, optional index-file hint                                                               |
-| 02 Search the archive  | Not knowing how to buy scripting or find starter code                    | First reward names the purchase; purchase points to `help run`; briefing names editable search script                                       |
-| 03 Nested archive      | Stopping at the first match; not knowing how to reuse scripts            | Briefing explains active-record check; optional recursive-library hint; `guide commands`                                                    |
-| 04 Active credentials  | Treating every matching credential as valid                              | Briefing stresses timestamps and revocation; optional hint names evidence files                                                             |
-| 05 Connected machines  | Searching only the entry machine or losing home tools                    | Briefing introduces `neighbors`, `ssh`, and `exit`; guide explains home editing while remote                                                |
-| 06 Network discovery   | Cycles, undiscovered handles, or scripts moving the terminal             | Briefing names network purchase and starter crawler; API topic explains handles; optional hint reinforces session behavior                  |
-| 07 Traffic collector   | Trying to submit an answer; disconnecting useful traffic                 | Start explains automatic completion; briefing states what must remain online; screens topic explains collected observations                 |
-| 08 Network isolation   | Expecting a plan preview or not knowing how to undo a cut                | Briefing describes current-connectivity checks and restoring links; optional hint gives a cut plan                                          |
-| 09 Service repair      | Editing a home file instead of remote config; breaking JSON quoting      | Briefing explains remote `write`; detailed help and troubleshooting explain full replacement and quoting; optional hint covers dependencies |
-| 10 Conflicting records | Sorting timestamp strings or accepting revoked events                    | Briefing requires normalized times and revocation filtering; optional hint explains offsets; API topic supports gathering records           |
-| 11 Thermal balancing   | Expecting transfers to arrive immediately; time staying paused           | Start explains time controls; simulation topic covers tick order; troubleshooting explains in-flight work and editor pauses                 |
-| 12 Moving process      | Guessing without finding sightings; traps never executing                | Briefing names sightings log and exact simulation command; free hint explains the movement rule; live completion/failure notice             |
-| 13 Coordinated update  | Stepping between individual queued commits                               | Briefing says queue all three before advancing; optional hint supplies command order; live outcome notice                                   |
-| 14 Priority surge      | Missing arrivals or urgent deadlines                                     | Briefing and scheduling topic describe scheduled events, priorities, and job observations; reset preserves tools for iteration              |
-| 15 Cooling failure     | Controller stopping silently or repeatedly retrying without measurements | Controller error notices explain reloading fixed code; briefing names cooling and action history; final completion explains replay          |
+## Navigation, editor, and persistence
 
-## Verification and playtest focus
+- Use neighbors and ssh in network-1, then exit. At gateway, exit should explain
+  mission leave. Home must never appear as a network neighbor or script handle.
+- Use edit /home/solve.js while remote. It should be clear that this is the
+  player's traveling code notebook, while ctx.fs reads the remote evidence.
+- Leave the level: clear terminal, green accent and home title; files/stars kept.
+- Reload during a level: fresh level introduction, no old commands or terminal
+  text. Inspect an exported save to confirm it contains no shell/transcript data.
+- Save or discard normal editor changes with hotkeys. Recheck Vim :q protection,
+  :q!, :wq, and custom :run. New files should remain recoverable drafts until saved.
+- Import an older save: player files should survive; retired systems, old mission
+  progression and terminal output should not return. Reject damaged imports
+  without replacing the active save.
 
-TypeScript and formatting checks are recorded in `implementation.md`. Regression
-tests were added for welcome persistence, next-step selection, guide links,
-action completion, and live simulation notices. The current suite and production
-build still need a run where subprocess permissions allow it; no permission was
-requested while the user was away.
-
-The embedded-browser checks are narrower than a fresh end-to-end playthrough.
-They use a separate localhost origin so the user's existing save is preserved.
-The source review covers all fifteen missions, but puzzle difficulty and whether
-the hints arrive at the right time still need the user's fresh playtest.
-
-For that playtest, check whether the welcome gives enough direction without
-opening a guide, the first reward makes the scripting purchase obvious, and
-mission starts make it clear when to submit an answer or advance time. Later,
-check remote repair writes, discovering observations for screens, and recovering
-from a failed simulation without feeling that tools were lost.
+Current coverage is source review plus TypeScript checking. The automated suite,
+production build, and embedded-browser playthrough still need execution when the
+sandbox permits the esbuild subprocess. No current full playthrough is claimed.

@@ -1,460 +1,229 @@
-export type MissionKind =
-  | 'search'
-  | 'traffic'
-  | 'isolation'
-  | 'service'
-  | 'records'
-  | 'thermal'
-  | 'moving'
-  | 'coordination';
+export type MissionKind = 'files' | 'network';
 export interface MissionHost {
   id: string;
   links: string[];
   files: Record<string, string>;
-  writable?: string[];
 }
 export interface MissionDefinition {
   id: string;
   title: string;
   kind: MissionKind;
-  briefing: string;
-  hint: string;
-  reward: number;
   entry: string;
+  briefing: string;
+  hints: readonly string[];
+  prerequisite?: string;
+}
+export interface MissionInstance {
   hosts: MissionHost[];
-  answer?: string;
-  requiredCapability?: string;
-  thermal?: {
-    workload: number;
-    deadline: number;
-    events?: {
-      tick: number;
-      type: 'arrival' | 'cooling';
-      host: string;
-      amount?: number;
-      priority?: number;
-      deadline?: number;
-      cooling?: number;
-    }[];
-  };
+  answer: string;
 }
-
-function archive(count: number, directory = '/archive'): Record<string, string> {
-  return Object.fromEntries(
-    Array.from({ length: count }, (_, index) => [
-      `${directory}/record-${String(index + 1).padStart(3, '0')}.txt`,
-      `ARCHIVE ${index + 1}\nState: archived\nOwner: operations\nChecksum: ${(index * 7919 + 17).toString(16)}\n`,
-    ]),
-  );
-}
-const host = (
-  id: string,
-  files: Record<string, string>,
-  links: string[] = [],
-  writable?: string[],
-): MissionHost => ({ id, files, links, writable });
-
 export const missions: readonly MissionDefinition[] = [
   {
-    id: 'deployment',
-    title: '01 · Deployment note',
-    kind: 'search',
-    reward: 3,
-    entry: 'deploy',
+    id: 'files-1',
+    title: 'The first note',
+    kind: 'files',
+    entry: 'archive',
     briefing:
-      'The deployment team left fifteen notes. Find the password belonging to the active deployment. Connect with ssh deploy, use ls /notes to list files and cat <path> to read one, then mission submit <password> to submit the value you found. Earn tokens to unlock JavaScript scripting.',
-    hint: 'Read /notes/INDEX.txt. Only one deployment is active; its note identifies the password file.',
-    answer: 'copper-lantern',
-    hosts: [
-      host('deploy', {
-        ...archive(12, '/notes'),
-        '/notes/INDEX.txt':
-          'Active deployment: aurora-7\nRead /notes/deployment.txt. Old records are not active.\n',
-        '/notes/deployment.txt':
-          'deployment=aurora-7\nstatus=ACTIVE\npassword_file=/notes/access.txt\n',
-        '/notes/access.txt': 'deployment=aurora-7\npassword=copper-lantern\n',
-      }),
+      'Find the password in /notes/access.txt. Read it with cat, then use mission submit <password>.',
+    hints: [
+      'The briefing names the file. cat reads a file without changing it.',
+      'Submit the value after password=, not the whole line.',
     ],
   },
   {
-    id: 'archive',
-    title: '02 · Search the archive',
-    kind: 'search',
-    reward: 3,
-    entry: 'vault',
+    id: 'files-2',
+    title: 'A few more files',
+    kind: 'files',
+    entry: 'archive',
+    prerequisite: 'files-1',
     briefing:
-      'A much larger archive contains one RECOVERY_KEY marker. Search /archive and submit its value with mission submit. Buy scripting using upgrade buy scripting; edit /home/scripts/search.js to build a reusable search tool.',
-    hint: 'run /home/scripts/search.js RECOVERY_KEY /archive. The supplied script is editable; inspect its implementation.',
-    answer: 'glass-orbit',
-    hosts: [
-      host('vault', {
-        ...archive(70),
-        '/archive/record-047.txt': 'State: verified\nRECOVERY_KEY=glass-orbit\n',
-      }),
+      'Find the PASSWORD marker among the files in /notes. Your first search can be manual or scripted. Scripting is now available: guide scripts explains the small building blocks.',
+    hints: [
+      'Use ls /notes to see the files, then read them.',
+      'A script can loop over ctx.fs.list("/notes") and read each entry.path.',
+      'Search each file for PASSWORD= and submit its value.',
     ],
   },
   {
-    id: 'nested',
-    title: '03 · Nested archive',
-    kind: 'search',
-    reward: 3,
-    entry: 'branches',
+    id: 'files-3',
+    title: 'Below the surface',
+    kind: 'files',
+    entry: 'archive',
+    prerequisite: 'files-2',
     briefing:
-      'The archive is spread over directories. Several records match RECOVERY_KEY; only a record with active=true contains the key. Extend your search with recursion and line numbers. Custom commands can be unlocked now: upgrade buy commands. guide commands explains how to reuse your tools.',
-    hint: 'The library /home/lib/search.js already demonstrates recursive traversal. Inspect all matches, not just the first one.',
-    answer: 'winter-signal',
-    hosts: [
-      host('branches', {
-        ...archive(20, '/archive/old'),
-        ...archive(20, '/archive/2026/november'),
-        '/archive/old/key.txt': 'active=false\nRECOVERY_KEY=old-signal\n',
-        '/archive/2026/november/active/key.txt': 'active=true\nRECOVERY_KEY=winter-signal\n',
-      }),
+      'Find PASSWORD somewhere below /archive. Directories can contain other directories. Extend your existing search rather than starting over.',
+    hints: [
+      'ls accepts a directory path. Inspect entry.type in a script.',
+      'For a directory, repeat the same search inside it; for a file, read its contents.',
+      'A recursive function or a list of directories still to visit can both work.',
     ],
   },
   {
-    id: 'credentials',
-    title: '04 · Active credentials',
-    kind: 'search',
-    reward: 4,
-    entry: 'registry',
+    id: 'files-4',
+    title: 'The right match',
+    kind: 'files',
+    entry: 'archive',
+    prerequisite: 'files-3',
     briefing:
-      'Backups and current records conflict. Determine the active release and submit its credential. Read timestamps and revocation records, not just matching strings.',
-    hint: 'The active release is in /deploy/current.json. Its credential must not appear in revoked.json.',
-    answer: 'river-amber',
-    hosts: [
-      host('registry', {
-        '/deploy/current.json': JSON.stringify(
-          { release: 'r19', updated: '2026-11-14T09:00:00Z' },
-          null,
-          2,
-        ),
-        '/credentials/revoked.json': JSON.stringify(['old-r18', 'leaked-r19']),
-        '/credentials/r18.json': JSON.stringify({
-          release: 'r18',
-          credential: 'old-r18',
-          issued: '2026-11-12T08:00:00Z',
-        }),
-        '/credentials/r19-backup.json': JSON.stringify({
-          release: 'r19',
-          credential: 'leaked-r19',
-          issued: '2026-11-13T08:00:00Z',
-        }),
-        '/credentials/r19-active.json': JSON.stringify({
-          release: 'r19',
-          credential: 'river-amber',
-          issued: '2026-11-14T08:30:00Z',
-        }),
-        ...archive(12, '/backups'),
-      }),
+      'Several files contain PASSWORD. Only the record with active=true is valid. Keep your traversal and improve how it selects a match.',
+    hints: [
+      'Read the complete matching record, not just the password line.',
+      'The active flag and password belong to the same file.',
     ],
   },
   {
-    id: 'connected',
-    title: '05 · Connected machines',
-    kind: 'search',
-    reward: 5,
+    id: 'files-5',
+    title: 'Follow the reference',
+    kind: 'files',
+    entry: 'archive',
+    prerequisite: 'files-4',
+    briefing:
+      '/deploy/current.json identifies the active release. Find that release under /credentials and submit its password. Other releases are decoys.',
+    hints: [
+      'Start by reading current.json.',
+      'JSON.parse(ctx.fs.read(path)) converts JSON text into fields you can inspect.',
+      'Match the release ID before choosing a password.',
+    ],
+  },
+  {
+    id: 'files-6',
+    title: 'A tool worth keeping',
+    kind: 'files',
+    entry: 'archive',
+    prerequisite: 'files-5',
+    briefing:
+      'Find the active PASSWORD record in a larger nested archive. The rules are familiar; reuse your search and filtering. The optional automation star checks fresh layouts too.',
+    hints: [
+      'Your files-4 approach should still apply.',
+      'Do not assume a particular filename or directory depth.',
+    ],
+  },
+  {
+    id: 'network-1',
+    title: 'The next machine',
+    kind: 'network',
     entry: 'gateway',
+    prerequisite: 'files-2',
     briefing:
-      'A key is on one of three connected machines. Use neighbors to discover links, ssh to move between hosts, and exit to return. Submit the NETWORK_KEY. This reward funds scripted network handles.',
-    hint: 'gateway → relay → store. Run neighbors on each machine. Your home scripts remain available on every host.',
-    answer: 'harbor-light',
-    hosts: [
-      host(
-        'gateway',
-        { '/welcome.txt': 'The key is not here. Explore the network using neighbors.' },
-        ['relay'],
-      ),
-      host('relay', archive(10), ['gateway', 'store']),
-      host('store', { ...archive(15), '/archive/key.txt': 'NETWORK_KEY=harbor-light' }, ['relay']),
+      'The password is on a neighboring machine, under /notes. Use neighbors to discover it and ssh <host> to connect. File-reading rules are unchanged.',
+    hints: [
+      'neighbors shows connections from the current machine.',
+      'Follow the connection, list /notes, and read the password record.',
     ],
   },
   {
-    id: 'discovery',
-    title: '06 · Network discovery',
-    kind: 'search',
-    reward: 6,
-    entry: 'mesh-0',
+    id: 'network-2',
+    title: 'Choose a branch',
+    kind: 'network',
+    entry: 'gateway',
+    prerequisite: 'network-1',
     briefing:
-      'Map a cyclic network and locate TARGET_KEY. Use upgrade buy network for explicit scripted host handles, use a visited set, and keep your collected observations. See guide api and /home/scripts/crawl.js. This reward can unlock custom screens.',
-    hint: 'run /home/scripts/crawl.js TARGET_KEY. Study ctx.network.connect(host) and handle.fs; scripted connections do not move your terminal.',
-    answer: 'violet-compass',
-    hosts: Array.from({ length: 8 }, (_, index) =>
-      host(
-        `mesh-${index}`,
-        {
-          ...archive(8),
-          ...(index === 6 ? { '/archive/target.txt': 'TARGET_KEY=violet-compass' } : {}),
-        },
-        [
-          ...new Set([
-            `mesh-${(index + 1) % 8}`,
-            `mesh-${(index + 7) % 8}`,
-            `mesh-${(index + 3) % 8}`,
-          ]),
-        ],
-      ),
-    ),
-  },
-  {
-    id: 'traffic',
-    title: '07 · Traffic collector',
-    kind: 'traffic',
-    reward: 5,
-    entry: 'router',
-    briefing:
-      'One machine collects internal traffic and forwards it to an external sink. Inspect connections, identify the collector, and disable only its external link. Keep application traffic online. Use inspect, link, and custom screens.',
-    hint: 'inspect collector reveals an outbound collector → outside flow. link collector outside off stops it without breaking router → app.',
-    hosts: [
-      host(
-        'router',
-        { '/brief.txt': 'Keep the application reachable. External exfiltration must stop.' },
-        ['app', 'sensor', 'collector'],
-      ),
-      host('app', { '/service.txt': 'application production' }, ['router', 'collector']),
-      host('sensor', {}, ['router', 'collector']),
-      host('collector', {}, ['router', 'app', 'sensor', 'outside']),
-      host('outside', {}, ['collector']),
+      'Several machines branch out from gateway. Find PASSWORD in their /notes directories. Reuse your file search; add exploration of neighboring hosts.',
+    hints: [
+      'Use exit to return to the previous machine. At the entry machine, use mission leave to go home.',
+      'Scripts can call ctx.network.neighbors() and ctx.network.connect(id). A handle has its own fs and does not move the terminal.',
     ],
   },
   {
-    id: 'isolation',
-    title: '08 · Network isolation',
-    kind: 'isolation',
-    reward: 5,
-    entry: 'core',
+    id: 'network-3',
+    title: 'Around in circles',
+    kind: 'network',
+    entry: 'gateway',
+    prerequisite: 'network-2',
     briefing:
-      'Quarantine hostile red-1 and red-2 with at most two disconnected links. Friendly core and clinic must stay connected. Inspect the graph, apply link <from> <to> off, and use reach <from> <to> to check current connectivity. You can restore a link with link <from> <to> on.',
-    hint: 'Both hostile machines sit behind bridge. Cut core ↔ bridge and clinic ↔ bridge. Do not cut core ↔ clinic.',
-    hosts: [
-      host('core', {}, ['clinic', 'bridge']),
-      host('clinic', {}, ['core', 'bridge']),
-      host('bridge', {}, ['core', 'clinic', 'red-1', 'red-2']),
-      host('red-1', {}, ['bridge', 'red-2']),
-      host('red-2', {}, ['bridge', 'red-1']),
+      'The network contains cycles. Find the active PASSWORD record while avoiding endless revisits. Your file search should remain useful.',
+    hints: [
+      'Keep a record of machines already visited.',
+      'Mark a host visited before exploring its neighbors.',
+      'A Set of host IDs works well for detecting revisits.',
     ],
   },
   {
-    id: 'repair',
-    title: '09 · Service repair',
-    kind: 'service',
-    reward: 6,
-    entry: 'frontend',
+    id: 'network-4',
+    title: 'Distributed evidence',
+    kind: 'network',
+    entry: 'gateway',
+    prerequisite: 'network-3',
     briefing:
-      'Restore the web service by following its dependencies. Inspect services and logs, fix the database configuration, then restart services in dependency order. Remote writes are allowed only under /etc/app. On the database host, read the configuration with cat and replace its complete contents with write (see help write). edit always opens home files. guide stuck explains quoted JSON writes.',
-    hint: 'db /etc/app/database.json needs {"port":5432,"enabled":true}. Then service db restart, service api restart, service frontend restart.',
-    hosts: [
-      host('frontend', { '/logs/service.log': 'web unhealthy: upstream api is unavailable' }, [
-        'api',
-      ]),
-      host(
-        'api',
-        { '/logs/service.log': 'api unhealthy: database refused connection on port 5432' },
-        ['frontend', 'db'],
-      ),
-      host(
-        'db',
-        {
-          '/etc/app/database.json': '{"port":5433,"enabled":true}',
-          '/logs/service.log': 'database misconfigured: expected port 5432',
-        },
-        ['api'],
-        ['/etc/app'],
-      ),
-    ],
-  },
-  {
-    id: 'records',
-    title: '10 · Conflicting records',
-    kind: 'records',
-    reward: 5,
-    entry: 'dispatch',
-    briefing:
-      'Find the final valid destination for shipment A17. Merge correction records across machines, normalize timezone offsets, and exclude revoked events. Submit the destination. A timeline screen can help.',
-    hint: 'Normalize timestamps with Date.parse. The 12:10+02:00 correction is later than 09:45Z. The later-looking record with revoked=true is invalid.',
-    answer: 'north-harbor',
-    hosts: [
-      host(
-        'dispatch',
-        {
-          '/shipments/base.json': JSON.stringify({
-            shipment: 'A17',
-            destination: 'east-yard',
-            time: '2026-11-14T09:00:00Z',
-          }),
-        },
-        ['customs'],
-      ),
-      host(
-        'customs',
-        {
-          '/shipments/correction.json': JSON.stringify({
-            shipment: 'A17',
-            destination: 'west-dock',
-            time: '2026-11-14T09:45:00Z',
-          }),
-        },
-        ['dispatch', 'warehouse'],
-      ),
-      host(
-        'warehouse',
-        {
-          '/shipments/final.json': JSON.stringify({
-            shipment: 'A17',
-            destination: 'north-harbor',
-            time: '2026-11-14T12:10:00+02:00',
-          }),
-          '/shipments/revoked.json': JSON.stringify({
-            shipment: 'A17',
-            destination: 'south-airfield',
-            time: '2026-11-14T11:30:00Z',
-            revoked: true,
-          }),
-        },
-        ['customs'],
-      ),
-    ],
-  },
-  {
-    id: 'thermal',
-    title: '11 · Thermal balancing',
-    kind: 'thermal',
-    reward: 8,
-    entry: 'compute-a',
-    briefing:
-      'Finish 96 units of work by tick 45 without a thermal shutdown. All work starts on compute-a. Use transfer <from> <to> <amount>, watch heat and bandwidth, and use simulation step. Try an automation controller after unlocking controllers.',
-    hint: 'While paused, transfer compute-a compute-b 28 and transfer compute-a compute-c 28. Transfers take ticks; keep all three machines productive. Then simulation step 35. Reset the mission if a deadline is missed.',
-    hosts: [
-      host('compute-a', {}, ['compute-b', 'compute-c']),
-      host('compute-b', {}, ['compute-a', 'compute-c']),
-      host('compute-c', {}, ['compute-a', 'compute-b']),
-    ],
-  },
-  {
-    id: 'moving',
-    title: '12 · Moving process',
-    kind: 'moving',
-    reward: 6,
-    entry: 'ring-0',
-    briefing:
-      'A process moves one node clockwise per tick around a five-node ring. Sightings are partial. Set trap <host> <tick> to intercept it at a future tick, then use simulation step to advance time. Read /logs/sightings.log for the initial evidence. Sightings and predictions can be visualized.',
-    hint: 'At tick 0 the process is on ring-0. At tick n it is on ring-(n % 5). Try trap ring-3 3, then simulation step 3.',
-    hosts: Array.from({ length: 5 }, (_, i) =>
-      host(
-        `ring-${i}`,
-        {
-          '/logs/sightings.log':
-            i === 0
-              ? 'tick=0 process=specter host=ring-0\nRule: clockwise, one hop per tick.'
-              : 'No current sighting.',
-        },
-        [`ring-${(i + 1) % 5}`, `ring-${(i + 4) % 5}`],
-      ),
-    ),
-  },
-  {
-    id: 'coordination',
-    title: '13 · Coordinated update',
-    kind: 'coordination',
-    reward: 10,
-    entry: 'database',
-    briefing:
-      'Prepare release r2 on database, api-node, and web-node. Commit all three in the same simulation tick, ordered database → api-node → web-node. Use prepare and queue; queue all three before using simulation step, because queued actions apply on the next tick. A controller can return the same ordered action list.',
-    hint: 'prepare database r2; prepare api-node r2; prepare web-node r2 (separate commands). Then queue database, queue api-node, queue web-node, and simulation step.',
-    hosts: [
-      host('database', {}, ['api-node']),
-      host('api-node', {}, ['database', 'web-node']),
-      host('web-node', {}, ['api-node']),
-    ],
-  },
-  {
-    id: 'surge',
-    title: '14 · Priority surge',
-    kind: 'thermal',
-    reward: 6,
-    entry: 'compute-a',
-    briefing:
-      'A bonus scheduling challenge: 72 routine work units are followed by 48 urgent units at tick 6. Urgent work must finish by tick 32; all 120 units must finish by tick 45. Processing selects higher-priority jobs first. Watch jobs and in-flight transfers in the observation snapshot and adapt your controller.',
-    hint: 'Use the balance controller and inspect incoming jobs in mission status or a custom table. The urgent arrival occurs before the tick-6 controller snapshot. Keep all three machines productive.',
-    thermal: {
-      workload: 72,
-      deadline: 45,
-      events: [
-        { tick: 6, type: 'arrival', host: 'compute-a', amount: 48, priority: 3, deadline: 32 },
-      ],
-    },
-    hosts: [
-      host('compute-a', {}, ['compute-b', 'compute-c']),
-      host('compute-b', {}, ['compute-a', 'compute-c']),
-      host('compute-c', {}, ['compute-a', 'compute-b']),
-    ],
-  },
-  {
-    id: 'cooling',
-    title: '15 · Cooling failure',
-    kind: 'thermal',
-    reward: 6,
-    entry: 'compute-a',
-    briefing:
-      'Another 16 work units arrive at tick 6, and compute-b loses most cooling at tick 8. Complete 112 units by tick 45 without a shutdown. Extend your scheduler using temperature, cooling, priorities, and the action-result history.',
-    hint: 'The balance controller is a starting point. Observe cooling and transfer queues, then avoid sending work to a hot node. Your tools and history persist if you reset this challenge.',
-    thermal: {
-      workload: 96,
-      deadline: 45,
-      events: [
-        { tick: 6, type: 'arrival', host: 'compute-c', amount: 16, priority: 2, deadline: 40 },
-        { tick: 8, type: 'cooling', host: 'compute-b', cooling: 0.4 },
-      ],
-    },
-    hosts: [
-      host('compute-a', {}, ['compute-b', 'compute-c']),
-      host('compute-b', {}, ['compute-a', 'compute-c']),
-      host('compute-c', {}, ['compute-a', 'compute-b']),
+      'The gateway has /deploy/current.json. Find the matching release credential elsewhere in the cyclic network. Combine your reference lookup, file search, and network traversal.',
+    hints: [
+      'Determine the current release before selecting a credential.',
+      'Collect matching release records across discovered hosts.',
+      'Use the release field to reject old credentials.',
     ],
   },
 ];
 
-export const upgrades = [
-  {
-    id: 'scripting',
-    name: 'JavaScript modules',
-    cost: 2,
-    after: 1,
-    description: 'Run scripts, import home modules, and use structured filesystem APIs.',
-  },
-  {
-    id: 'commands',
-    name: 'Custom commands',
-    cost: 2,
-    after: 2,
-    description: 'Load a startup module and register reusable terminal commands.',
-  },
-  {
-    id: 'network',
-    name: 'Scripted network handles',
-    cost: 4,
-    after: 5,
-    description: 'Connect to discovered hosts from scripts without moving your terminal.',
-  },
-  {
-    id: 'screens',
-    name: 'Custom screens',
-    cost: 4,
-    after: 6,
-    description: 'Render tables, charts, Mermaid diagrams, and interactive graphs.',
-  },
-  {
-    id: 'telemetry',
-    name: 'Telemetry history',
-    cost: 3,
-    after: 7,
-    description: 'Retain per-tick measurements for live screens and diagnostics.',
-  },
-  {
-    id: 'controllers',
-    name: 'Automation controllers',
-    cost: 5,
-    after: 9,
-    description: 'Run bounded decision functions on each simulation tick.',
-  },
-] as const;
+/** Seeded variations change evidence and layout while keeping each level's published rules. */
+export function createInstance(id: string, seed: number): MissionInstance {
+  const definition = missions.find((m) => m.id === id);
+  if (!definition) throw new Error('Unknown level: ' + id);
+  let state = seed >>> 0;
+  const random = (count: number) => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state % count;
+  };
+  const answer = `key-${random(0xffffff).toString(16)}-${random(0xffffff).toString(16)}`;
+  const files: Record<string, string> = {};
+  const host = (id: string, files: Record<string, string>, links: string[] = []): MissionHost => ({
+    id,
+    files,
+    links,
+  });
+  const active = `active=true\nPASSWORD=${answer}\n`;
+  if (id === 'files-1') files['/notes/access.txt'] = `password=${answer}\n`;
+  if (id === 'files-2') {
+    const target = random(5);
+    for (let i = 0; i < 5; i++)
+      files[`/notes/note-${i}.txt`] =
+        i === target ? `PASSWORD=${answer}\n` : 'Operations note: no credential stored here.\n';
+  }
+  if (['files-3', 'files-4', 'files-6'].includes(id)) {
+    const count = id === 'files-6' ? 32 : 8;
+    const target = random(count);
+    for (let i = 0; i < count; i++) {
+      const depth = 1 + random(id === 'files-6' ? 4 : 2);
+      const directory = Array.from({ length: depth }, () => `section-${random(7)}`).join('/');
+      files[`/archive/${directory}/record-${i}.txt`] =
+        i === target
+          ? active
+          : id === 'files-3'
+            ? 'Archive note.\n'
+            : `active=false\nPASSWORD=retired-${i}\n`;
+    }
+  }
+  if (id === 'files-5') {
+    const release = `r${random(5)}`;
+    files['/deploy/current.json'] = JSON.stringify({ release });
+    for (let i = 0; i < 5; i++)
+      files[`/credentials/release-${i}.json`] = JSON.stringify({
+        release: `r${i}`,
+        password: `r${i}` === release ? answer : `retired-${i}`,
+      });
+  }
+  if (definition.kind === 'files') return { hosts: [host('archive', files)], answer };
+  const count = id === 'network-1' ? 2 : id === 'network-2' ? 4 + random(3) : 5 + random(4);
+  const ids = ['gateway', ...Array.from({ length: count - 1 }, (_, i) => `node-${i + 1}`)];
+  const target = 1 + random(count - 1);
+  const release = `r${random(500)}`;
+  const hosts = ids.map((name) => host(name, {}));
+  for (let i = 1; i < count; i++) {
+    const parent = id === 'network-2' ? (i <= 2 ? 0 : random(i)) : i - 1;
+    if (!hosts[parent].links.includes(ids[i])) hosts[parent].links.push(ids[i]);
+    hosts[i].links.push(ids[parent]);
+    hosts[i].files['/notes/record.txt'] =
+      i === target && id !== 'network-4' ? active : 'No active password in this note.\n';
+    if (id === 'network-4')
+      hosts[i].files['/credentials/release.json'] = JSON.stringify({
+        release: i === target ? release : `retired-${i}`,
+        password: i === target ? answer : `old-${i}`,
+      });
+  }
+  if (['network-3', 'network-4'].includes(id)) {
+    hosts[count - 1].links.push('gateway');
+    hosts[0].links.push(ids[count - 1]);
+  }
+  hosts[0].files['/notes/welcome.txt'] = 'Explore connected hosts. Home is outside this level.\n';
+  if (id === 'network-4') hosts[0].files['/deploy/current.json'] = JSON.stringify({ release });
+  return { hosts, answer };
+}

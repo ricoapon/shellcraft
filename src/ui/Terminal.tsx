@@ -2,21 +2,16 @@ import { useEffect, useEffectEvent, useRef } from 'react';
 import { Terminal as Xterm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { Readline } from 'xterm-readline';
-import type { RefObject } from 'react';
+
 import type { TranscriptEntry } from '../core/shell';
 import type { EngineReply } from '../game/engine';
 import '@xterm/xterm/css/xterm.css';
 
 interface Props {
   initialEntries: readonly TranscriptEntry[];
-  getLocation(): { host: string; directory: string };
+  getLocation(): { host: string; directory: string; level?: string };
   onCommand(input: string): Promise<EngineReply>;
   onOpenSource(path: string, line: number): void;
-  apiRef: RefObject<TerminalHandle | null>;
-}
-
-export interface TerminalHandle {
-  write(output: readonly string[]): void;
 }
 
 function formatPrompt(workingDirectory: string, host = 'home'): string {
@@ -29,7 +24,7 @@ function plainText(text: string): string {
   return text.replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '').replace(/\n/g, '\r\n');
 }
 
-export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource, apiRef }: Props) {
+export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource }: Props) {
   const host = useRef<HTMLDivElement>(null);
   // Startup data is replayed once; React updates must not reset the live terminal.
   const savedEntries = useRef(initialEntries);
@@ -54,7 +49,8 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
       });
       const fit = new FitAddon();
       const readline = new Readline();
-      const highlightPrompt = (prompt: string) => `\x1b[38;2;143;219;171m${prompt}\x1b[39m`;
+      const highlightPrompt = (prompt: string) =>
+        `${location().level ? '\x1b[38;2;199;165;235m' : '\x1b[38;2;143;219;171m'}${prompt}\x1b[39m`;
       readline.setHighlighter({
         highlight: (line) => line,
         highlightChar: () => false,
@@ -91,52 +87,28 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
       }
 
       for (const entry of savedEntries.current) {
-        readline.println(
-          `${highlightPrompt(plainText(formatPrompt(entry.workingDirectory ?? '/home', entry.host)))}${plainText(entry.input)}`,
-        );
+        if (!entry.input.startsWith('['))
+          readline.println(
+            `${highlightPrompt(plainText(formatPrompt(entry.workingDirectory ?? '/home', entry.host)))}${plainText(entry.input)}`,
+          );
         writeOutput(entry.output);
-        readline.appendHistory(entry.input);
+        if (!entry.input.startsWith('[')) readline.appendHistory(entry.input);
       }
 
       const controller = new AbortController();
-      const notices: string[] = [];
-      let activeRead: AbortController | undefined;
-      let pendingInput = '';
-      const interrupted = new Error('Simulation notice');
-      apiRef.current = {
-        write(output) {
-          notices.push(...output);
-          if (activeRead && !activeRead.signal.aborted) {
-            pendingInput = readline.getLine();
-            activeRead.abort(interrupted);
-          }
-        },
-      };
+
       async function readCommands() {
         while (!controller.signal.aborted) {
-          if (notices.length) writeOutput(notices.splice(0));
           const current = location();
-          activeRead = new AbortController();
-          const cancel = () => activeRead?.abort();
-          controller.signal.addEventListener('abort', cancel, { once: true });
-          const read = readline.read(plainText(formatPrompt(current.directory, current.host)), {
-            signal: activeRead.signal,
-          });
-          if (pendingInput) {
-            terminal.input(pendingInput, true);
-            pendingInput = '';
-          }
-          let input: string;
-          try {
-            input = await read;
-          } catch (error) {
-            if (error !== interrupted) throw error;
-            readline.write('\r\n');
-            continue;
-          } finally {
-            controller.signal.removeEventListener('abort', cancel);
-            activeRead = undefined;
-          }
+          terminal.options.theme = {
+            background: current.level ? '#191321' : '#101816',
+            foreground: '#d7e3dc',
+            cursor: current.level ? '#c7a5eb' : '#8fdbab',
+          };
+          const input = await readline.read(
+            plainText(formatPrompt(current.directory, current.host)),
+            { signal: controller.signal },
+          );
           if (controller.signal.aborted) return;
           let result: EngineReply;
           try {
@@ -150,6 +122,7 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
           if (result.clearScreen) {
             // Clear the viewport and scrollback, then let readline draw a fresh prompt.
             readline.write('\x1b[2J\x1b[3J\x1b[H');
+            writeOutput(result.output);
           } else {
             writeOutput(result.output);
           }
@@ -166,7 +139,7 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
       observer.observe(element);
       dispose = () => {
         controller.abort();
-        apiRef.current = null;
+
         observer.disconnect();
         links.dispose();
         terminal.dispose();
@@ -176,7 +149,7 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
       cancelAnimationFrame(frame);
       dispose?.();
     };
-  }, [apiRef]);
+  }, []);
 
   return (
     <section className="terminal-panel" aria-label="Terminal">

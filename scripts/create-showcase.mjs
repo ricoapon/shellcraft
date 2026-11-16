@@ -1,48 +1,31 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
-
 const root = fileURLToPath(new URL('..', import.meta.url));
 const server = await createServer({ root, server: { middlewareMode: true }, appType: 'custom' });
 let game;
 try {
   const { GameEngine } = await server.ssrLoadModule('/src/game/engine.ts');
-  const { missions, upgrades } = await server.ssrLoadModule('/src/content/missions.ts');
+  const { createInstance } = await server.ssrLoadModule('/src/content/missions.ts');
   const { validateGameSave } = await server.ssrLoadModule('/src/game/save.ts');
   game = new GameEngine();
-  game.campaign.progress.completed = missions.slice(0, 10).map((mission) => mission.id);
-  game.campaign.progress.unlocked = upgrades.map((upgrade) => upgrade.id);
-  game.campaign.progress.tokens = 15;
-  for (const command of [
-    'mission start thermal',
-    'ssh compute-a',
-    'startup /home/startup.js',
-    'screen add /home/screens/network.js',
-    'screen add /home/screens/telemetry.js',
-    'controller add /home/controllers/balance.js',
-    'simulation step 3',
-  ]) {
-    await game.execute(command);
-    if (game.view().lastError) throw new Error(game.view().lastError.message);
+  for (const id of ['files-1', 'files-2']) {
+    game.campaign.start(id, 42);
+    game.campaign.submit(createInstance(id, 42).answer);
   }
-  game.openEditor('/home/controllers/balance.js');
-  game.settings.layout = 'tabs';
-  game.settings.activePanel = 'telemetry';
-  const directory = new URL('../examples/', import.meta.url);
-  await mkdir(directory, { recursive: true });
+  game.campaign.start('network-1', 42);
+  await mkdir(new URL('../examples/', import.meta.url), { recursive: true });
   await writeFile(
-    new URL('showcase-save.json', directory),
+    new URL('../examples/showcase-save.json', import.meta.url),
     JSON.stringify(
-      {
-        format: 'shellcraft',
-        version: 3,
-        state: validateGameSave(game.snapshot()),
-      },
+      { format: 'shellcraft', version: 4, state: validateGameSave(game.snapshot()) },
       null,
       2,
     ) + '\n',
   );
-  console.log('Created examples/showcase-save.json. Use save import in the terminal to open it.');
+  console.log(
+    'Created examples/showcase-save.json: network branch available, with your own code left to write.',
+  );
 } finally {
   game?.dispose();
   await server.close();

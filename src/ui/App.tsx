@@ -5,10 +5,8 @@ import type { EngineReply, EngineView } from '../game/engine';
 import type { RequestType } from '../game/protocol';
 import type { TranscriptEntry } from '../core/shell';
 import { Terminal } from './Terminal';
-import type { TerminalHandle } from './Terminal';
 
 const Editor = lazy(() => import('./editor/Editor'));
-const ScreenRenderer = lazy(() => import('./Screens'));
 
 class PanelBoundary extends Component<
   { children: ReactNode; label?: string; onClose?: () => void },
@@ -51,8 +49,11 @@ class PanelBoundary extends Component<
 
 export function App() {
   const client = useRef<GameClient | null>(null);
-  const terminal = useRef<TerminalHandle | null>(null);
-  const location = useRef({ host: 'home', directory: '/home' });
+
+  const location = useRef<{ host: string; directory: string; level?: string }>({
+    host: 'home',
+    directory: '/home',
+  });
   const importInput = useRef<HTMLInputElement>(null);
   const [view, setView] = useState<EngineView>();
   const [entries, setEntries] = useState<readonly TranscriptEntry[]>();
@@ -68,14 +69,18 @@ export function App() {
     const instance = new GameClient((response) => {
       if (disposed) return;
       if (response.view) {
-        location.current = { host: response.view.host, directory: response.view.directory };
+        location.current = {
+          host: response.view.host,
+          directory: response.view.directory,
+          level: response.view.mission?.id,
+        };
         setView(response.view);
       }
       if (response.entries) {
         setEntries(response.entries);
         setTerminalVersion((version) => version + 1);
       }
-      if (response.notice) terminal.current?.write(response.notice);
+
       if (response.warning !== undefined) setWarning(response.warning);
       else if (response.ok) setWarning('');
       if (!response.ok && response.error && response.id === undefined) setFailure(response.error);
@@ -102,7 +107,7 @@ export function App() {
     const response = await request('export');
     const url = URL.createObjectURL(
       new Blob(
-        [JSON.stringify({ format: 'shellcraft', version: 3, state: response.save }, null, 2)],
+        [JSON.stringify({ format: 'shellcraft', version: 4, state: response.save }, null, 2)],
         { type: 'application/json' },
       ),
     );
@@ -117,7 +122,7 @@ export function App() {
     try {
       if (file.size > 20_000_000) throw new Error('Save file exceeds 20 MB.');
       const data = JSON.parse(await file.text());
-      if (data.format !== 'shellcraft' || data.version !== 3)
+      if (data.format !== 'shellcraft' || ![3, 4].includes(data.version))
         throw new Error('Select an exported Shellcraft save.');
       await request('import', data.state);
       setFailure('');
@@ -136,17 +141,15 @@ export function App() {
     return reply;
   }
 
-  const panels =
-    view?.panels.filter(
-      (panel) =>
-        view.settings.layout !== 'tabs' ||
-        panel.id === (view.settings.activePanel ?? view.panels[0]?.id),
-    ) ?? [];
   return (
-    <main className="workstation">
-      <div className="terminal-window">
+    <main className={view?.mission ? 'workstation level-space' : 'workstation'}>
+      <div className={view?.mission ? 'terminal-window level-active' : 'terminal-window'}>
         <header className="window-titlebar">
-          <h1>Shellcraft</h1>
+          <h1>
+            {view?.mission
+              ? `Shellcraft — ${view.mission.id}: ${view.mission.title}`
+              : 'Shellcraft'}
+          </h1>
         </header>
         {(failure || warning) && (
           <pre className="storage-error" role="alert">
@@ -171,7 +174,7 @@ export function App() {
               ) : (
                 <Terminal
                   key={terminalVersion}
-                  apiRef={terminal}
+
                   initialEntries={entries}
                   getLocation={() => location.current}
                   onCommand={command}
@@ -201,42 +204,6 @@ export function App() {
               </PanelBoundary>
             )}
           </div>
-          {!view?.settings.editor && panels.length > 0 && (
-            <aside className="custom-screens" aria-label="Player-created screens">
-              {panels.map((panel) => (
-                <section className="player-panel" key={panel.id}>
-                  <h2 className="panel-title">{panel.title}</h2>
-                  {panel.error ? (
-                    <div className="error-message">
-                      <pre>{panel.error}</pre>
-                      <a
-                        href="#"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          send('openEditor', { path: panel.path });
-                        }}
-                      >
-                        Edit source
-                      </a>
-                    </div>
-                  ) : (
-                    panel.view && (
-                      <PanelBoundary>
-                        <Suspense fallback={<pre>Loading renderer…</pre>}>
-                          <ScreenRenderer
-                            node={panel.view}
-                            onInteract={(handler, value) =>
-                              send('interact', { panel: panel.id, handler, value })
-                            }
-                          />
-                        </Suspense>
-                      </PanelBoundary>
-                    )
-                  )}
-                </section>
-              ))}
-            </aside>
-          )}
         </div>
       </div>
     </main>

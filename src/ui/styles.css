@@ -205,142 +205,6 @@ pre {
   background: #19241f;
   color: #f0ca8b;
 }
-.custom-screens {
-  width: clamp(280px, 35vw, 520px);
-  flex-shrink: 0;
-  overflow: auto;
-  border-left: 1px solid var(--border);
-}
-.player-panel {
-  border-bottom: 1px solid var(--border);
-  overflow: hidden;
-}
-.panel-title {
-  margin: 0;
-  padding: 10px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  border-bottom: 1px solid var(--border);
-}
-.screen-stack {
-  display: grid;
-  gap: 10px;
-}
-.screen-card {
-  padding: 12px;
-  min-width: 0;
-  overflow: hidden;
-}
-.screen-card h3 {
-  color: #b9d8c2;
-  font-weight: 500;
-}
-.screen-card pre {
-  max-height: 320px;
-  overflow: auto;
-}
-.error-message {
-  padding: 10px;
-  color: #efaaa3;
-  font-size: 12px;
-}
-.error-message pre {
-  max-height: 240px;
-  overflow: auto;
-}
-.table-scroll {
-  overflow: auto;
-  max-height: 340px;
-}
-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 11px;
-}
-th,
-td {
-  text-align: left;
-  padding: 7px;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-th {
-  position: sticky;
-  top: 0;
-  background: #19241f;
-}
-th button {
-  border: 0;
-  padding: 0;
-  background: transparent;
-}
-tr[tabindex] {
-  cursor: pointer;
-}
-tr[tabindex]:hover {
-  background: #22362a;
-}
-.bar-chart {
-  display: grid;
-  gap: 6px;
-}
-.bar-chart > button {
-  display: grid;
-  grid-template-columns: minmax(60px, 1fr) 1.5fr 45px;
-  gap: 8px;
-  align-items: center;
-  border: 0;
-  padding: 3px 0;
-  background: transparent;
-  font-size: 10px;
-  text-align: left;
-}
-.bar-chart > button:disabled {
-  opacity: 1;
-}
-.bar-track {
-  height: 8px;
-  border-radius: 2px;
-  background: #243b2c;
-  overflow: hidden;
-}
-.bar-track > span {
-  display: block;
-  height: 100%;
-  background: #8fdbab;
-}
-.line-chart {
-  width: 100%;
-  height: auto;
-}
-.line-chart text {
-  fill: #91a399;
-  font-size: 11px;
-}
-.network-graph {
-  height: 280px;
-  min-width: 0;
-}
-.mermaid-diagram {
-  overflow: auto;
-}
-.mermaid-diagram svg {
-  max-width: 100%;
-}
-@media (max-width: 850px) {
-  .workspace-body {
-    flex-direction: column;
-  }
-  .custom-screens {
-    width: 100%;
-    max-height: 35dvh;
-    border-left: 0;
-    border-top: 1px solid var(--border);
-  }
-}
 @media (max-width: 640px), (max-height: 480px) {
   .workstation {
     padding: 0;
@@ -353,4 +217,20 @@ tr[tabindex]:hover {
   .terminal-panel {
     padding: 10px;
   }
+}
+
+.level-active {
+  border-color: #73538e;
+}
+.level-active .window-titlebar {
+  background: #251a32;
+  color: #dfc5f5;
+  border-color: #73538e;
+}
+.level-active .work-area,
+.level-active .terminal-output {
+  background: #191321;
+}
+.level-space {
+  background: radial-gradient(ellipse at top, #30223e, #100c15 75%);
 }

@@ -1,120 +1,27 @@
 import { getQuickJS } from 'quickjs-emscripten';
 import type { QuickJSContext, QuickJSRuntime } from 'quickjs-emscripten';
 import { resolvePath } from '../core/path';
-import type { CommandInfo } from '../commands/command';
-
-export interface Registrations {
-  commands: CommandInfo[];
-  screens: { name: string; title?: string }[];
-  controllers: { name: string }[];
-}
-export interface ViewNode {
-  type: string;
-  title?: string;
-  text?: string;
-  data?: unknown;
-  children?: ViewNode[];
-  onSelect?: string;
-  onClick?: string;
-  [key: string]: unknown;
-}
-
 const bootstrap = `
-function call(name, ...args) {
-  const result = JSON.parse(__bridge(name, JSON.stringify(args)));
-  if (result.error) throw new Error(result.error);
+function call(name,...args) {
+  const result=JSON.parse(__bridge(name,JSON.stringify(args)));
+  if(result.error) throw new Error(result.error);
   return result.value;
 }
-function filesystem(host) {
-  return {
-    list: (path = '.') => call('fs.list', host, path),
-    read: path => call('fs.read', host, path),
-    readFile: path => call('fs.read', host, path),
-    write: (path, content) => call('fs.write', host, path, content),
-    writeFile: (path, content) => call('fs.write', host, path, content),
-    mkdir: path => call('fs.mkdir', host, path),
-    stat: path => call('fs.stat', host, path),
-  };
-}
-globalThis.__commands = Object.create(null);
-globalThis.__screens = Object.create(null);
-globalThis.__controllers = Object.create(null);
-globalThis.__handlers = Object.create(null);
-globalThis.ctx = {
-  fs: filesystem(null), home: filesystem('home'),
-  print: (...values) => call('print', values.map(v => typeof v === 'string' ? v : JSON.stringify(v)).join(' ')),
-  session: {
-    get host() { return call('session.info').host; },
-    get workingDirectory() { return call('session.info').workingDirectory; },
-    connect: host => call('session.connect', host),
-    exit: () => call('session.exit'),
-  },
-  network: {
-    neighbors: host => call('network.neighbors', host),
-    connect: host => {
-      const id = call('network.connect', host);
-      return { id, fs: filesystem(id), neighbors: () => call('network.neighbors', id), inspect: () => call('inspect', id) };
-    },
-  },
-  inspect: host => call('inspect', host),
-  storage: {
-    get: (key, fallback = null) => call('storage.get', key) ?? fallback,
-    set: (key, value) => call('storage.set', key, value),
-    delete: key => call('storage.delete', key),
-  },
-  commands: {
-    register: (name, fn, metadata = {}) => {
-      call('capability', 'commands');
-      if (typeof fn !== 'function') throw new Error('Command handler must be a function.');
-      __commands[name] = { fn, ...metadata };
-    },
-    invoke: (name, args = []) => call('commands.invoke', name, args),
-  },
-  screens: {
-    register: (name, render, options = {}) => {
-      call('capability', 'screens');
-      if (typeof render !== 'function') throw new Error('Screen renderer must be a function.');
-      __screens[name] = { render, ...options };
-    },
-  },
-  controllers: {
-    register: (name, control) => {
-      call('capability', 'controllers');
-      if (typeof control !== 'function') throw new Error('Controller must be a function.');
-      __controllers[name] = control;
-    },
-  },
-  simulation: {
-    get state() { return call('simulation.state'); },
-    pause: () => call('simulation.pause'), resume: () => call('simulation.resume'),
-    step: (count = 1) => call('simulation.step', count),
-  },
-  mission: {
-    get briefing() { return call('mission.briefing'); },
-    get actions() { return call('mission.actions'); },
-    get observations() { return call('observations'); },
-    get status() { return call('mission.status'); },
-    action: action => call('mission.action', action),
-    submit: answer => call('mission.submit', answer),
-  },
-  get capabilities() { return call('capabilities'); },
+function filesystem(host) { return {
+  list:(path='.')=>call('fs.list',host,path),
+  read:path=>call('fs.read',host,path),
+  stat:path=>call('fs.stat',host,path),
+}; }
+globalThis.ctx={
+  fs:filesystem(null),
+  print:(...values)=>call('print',values.map(v=>typeof v==='string'?v:JSON.stringify(v)).join(' ')),
+  session:{get host(){return call('session.info').host;},get workingDirectory(){return call('session.info').workingDirectory;},connect:host=>call('session.connect',host),exit:()=>call('session.exit')},
+  network:{neighbors:host=>call('network.neighbors',host),connect:host=>{const id=call('network.connect',host);return {id,fs:filesystem(id),neighbors:()=>call('network.neighbors',id)};}},
+  storage:{get:(key,fallback=null)=>call('storage.get',key)??fallback,set:(key,value)=>call('storage.set',key,value),delete:key=>call('storage.delete',key)},
+  mission:{get briefing(){return call('mission.briefing');},get status(){return call('mission.status');},submit:answer=>call('mission.submit',answer)},
+  get capabilities(){return call('capabilities');},
 };
-globalThis.console = { log: ctx.print, warn: ctx.print, error: ctx.print };
-globalThis.view = {};
-for (const type of ['text','table','barChart','lineChart','mermaid','networkGraph','button']) {
-  view[type] = props => ({ type, ...(typeof props === 'string' ? {text:props} : props) });
-}
-view.stack = (...children) => ({ type:'stack', children: children.flat() });
-function serializeView(value, scope) {
-  for (const key of Object.keys(__handlers)) if (key.startsWith(scope + ':')) delete __handlers[key];
-  let index = 0;
-  return JSON.parse(JSON.stringify(value, (key, entry) => {
-    if (typeof entry !== 'function') return entry;
-    const id = scope + ':handler-' + index++;
-    __handlers[id] = entry;
-    return id;
-  }));
-}
+globalThis.console={log:ctx.print,warn:ctx.print,error:ctx.print};
 `;
 
 /** Each source module owns an isolated interpreter and its registrations. No eval on the host. */
@@ -206,44 +113,6 @@ export class PlayerModule {
       `globalThis.__result = __entry[${JSON.stringify(name)}](ctx, ${JSON.stringify(args)});
       if (__result && typeof __result.then === 'function') throw new Error('Player entry points must finish synchronously.');
       __result;`,
-      this.path,
-    );
-  }
-
-  registrations(): Registrations {
-    return this.evaluate(`({
-      commands:Object.entries(__commands).map(([name, value])=>({name,description:value.description,details:value.details,usage:value.usage,example:value.example})),
-      screens:Object.entries(__screens).map(([name,value])=>({name,title:value.title})),
-      controllers:Object.keys(__controllers).map(name=>({name}))
-    })`) as Registrations;
-  }
-
-  command(name: string, args: string[]): void {
-    this.evaluate(
-      `globalThis.__result=__commands[${JSON.stringify(name)}].fn(${JSON.stringify(args)});
-      if(__result&&typeof __result.then==='function') throw new Error('Player commands must finish synchronously.');`,
-      this.path,
-    );
-  }
-
-  render(name: string | undefined, observations: unknown, scope = 'view'): ViewNode {
-    const fn = name ? `__screens[${JSON.stringify(name)}].render` : '__entry.render';
-    return this.evaluate(
-      `serializeView(${fn}(view, ${JSON.stringify(observations)}), ${JSON.stringify(scope)})`,
-      this.path,
-    ) as ViewNode;
-  }
-
-  control(name: string | undefined, observations: unknown): unknown {
-    const fn = name ? `__controllers[${JSON.stringify(name)}]` : '__entry.control';
-    return this.evaluate(`${fn}(${JSON.stringify(observations)})`, this.path);
-  }
-
-  interact(handler: string, value: unknown): void {
-    this.evaluate(
-      `if (typeof __handlers[${JSON.stringify(handler)}] !== 'function') throw new Error('Screen changed; select the item again.');
-      globalThis.__result=__handlers[${JSON.stringify(handler)}](${JSON.stringify(value)});
-      if(__result&&typeof __result.then==='function') throw new Error('Screen handlers must finish synchronously.');`,
       this.path,
     );
   }

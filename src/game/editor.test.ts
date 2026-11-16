@@ -48,11 +48,12 @@ it('discards edits without overwriting a file and saves only on request', async 
 it('saves, closes, and runs the new source exactly once', async () => {
   const game = new GameEngine();
   try {
-    game.campaign.progress.unlocked = ['scripting'];
+    game.campaign.progress.completed = ['files-1'];
+    game.campaign.progress.stars = { 'files-1': 1 };
     await game.execute('edit "/home/my script.mjs"');
     await game.closeEditor('run', 'export function main(ctx) { ctx.print("new-source-ran"); }');
     expect(game.settings.editor).toBeUndefined();
-    expect(game.shell.entries.at(-1)?.output).toEqual(['new-source-ran']);
+    expect(game.shell.entries.at(-1)?.output.join()).toContain('new-source-ran');
     expect(game.shell.entries.filter((entry) => entry.input.startsWith('run '))).toHaveLength(1);
   } finally {
     game.dispose();
@@ -71,6 +72,7 @@ it('selects normal or Vim editing explicitly and preserves source on failed save
     expect(game.settings.editor?.path).toBe('/home/note.js');
     expect(game.world.home.filesystem.readFile('/home/note.js')).toBe('original');
     await game.closeEditor('discard');
+    game.world.home.filesystem.mkdir('/home/scripts');
     expect(() => game.openEditor('/home/scripts')).toThrow('Is a directory');
   } finally {
     game.dispose();

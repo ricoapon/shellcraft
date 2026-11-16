@@ -208,7 +208,7 @@ export default function Editor({ file, vim, onDraft, onSave, onExit }: Props) {
   return (
     <section className="editor-pane" aria-label="Code editor">
       <div className="editor-file" title={file.path}>
-        {file.path}
+        Code notebook — {file.path}
         {dirty ? ' •' : ''}
       </div>
       <div className="monaco-container" ref={container} />

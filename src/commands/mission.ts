@@ -1,111 +1,78 @@
 import type { Command } from './command';
 import type { CommandSystem } from './system';
-import { missionGuide, nextSteps } from '../content/player-support';
-
-function objectiveHelp(system: CommandSystem): string[] {
-  const current = system.mission.current();
-  if (!current) return ['Start with mission start deployment.'];
-  if (current.status === 'complete')
-    return [
-      'This assignment is complete. Use mission to find the next assignment, or mission reset to replay it without extra rewards.',
-    ];
-  if (current.status === 'failed')
-    return [
-      'This attempt has ended. Use mission hint to review your approach, then mission reset to try again. Your home tools are kept.',
-    ];
-  return [
-    current.requiresAnswer
-      ? 'When you find the answer, use mission submit <answer> (submit the value, not the marker name).'
-      : 'This objective completes automatically when its conditions are met; no answer submission is needed.',
-    ...(['thermal', 'moving', 'coordination'].includes(current.kind)
-      ? ['Time starts paused. Use simulation step to advance, or simulation resume for playback.']
-      : []),
-    `Stuck? mission hint gives a free clue. guide ${missionGuide(current.kind)} explains the tools.`,
-  ];
-}
-
 function orientation(system: CommandSystem): string[] {
   const current = system.mission.current();
   if (current?.status === 'active')
-    return [
-      'Current assignment: ' + current.title + '. Use mission briefing for the objective.',
-      ...(system.session.host() === 'home' ? ['Connect with ssh ' + current.entry + '.'] : []),
-      'For a free clue use mission hint; for general help use guide stuck.',
-    ];
-  if (current?.status === 'failed')
-    return [
-      'Your mission is paused after a failure. Use mission hint to review your approach, then mission reset. Your home tools are kept.',
-    ];
-  return nextSteps(
-    system.mission
-      .list()
-      .filter((item) => item.completed)
-      .map((item) => item.id),
-    system.upgrades
-      .list()
-      .filter((item) => item.owned)
-      .map((item) => item.id),
-    system.upgrades.tokens(),
-  );
+    return [`Current level: ${current.id}. Use mission briefing or mission hint.`];
+  const levels = system.mission.list();
+  const choices = ['files', 'network'].flatMap((group) => {
+    const next = levels.find(
+      (level) => level.group === group && level.available && level.stars === 0,
+    );
+    return next ? [`Next in ${group}: mission start ${next.id} — ${next.title}.`] : [];
+  });
+  return choices.length
+    ? choices
+    : [
+        'Both branches complete. Return for optional automation stars or experiment with your tools.',
+      ];
 }
-
 export const mission: Command = {
   name: 'mission',
-  description: 'Browse and manage missions.',
+  description: 'Choose levels and submit solutions.',
+  usage:
+    'mission [list [files|network] | start <id> | reset | leave | briefing | hint | status | submit <answer> | submit --script <path> [seed]]',
   details:
-    'List, start, or reset missions; read their briefing, hints, and status; submit an answer. Defaults to list. Resets preserve your workstation and hints are free.',
-  usage: 'mission list | start <id> | reset | briefing | hint | submit <answer> | status',
-  example: 'mission start deployment',
+    'One star means solved; two means your program solves fresh instances without manual intervention. Hints are free and do not affect stars. Submit scripts exporting main(ctx,args), using ctx.mission.submit(value). An optional seed replays one practice case without awarding stars. Leaving discards the current instance, keeping your files and best stars.',
+  example: 'mission start files-1',
   execute(args, system) {
-    const [action = 'list', ...parameters] = args;
+    const [action = 'list', ...values] = args;
     switch (action) {
       case 'list':
-        if (parameters.length) break;
+        if (values.length > 1 || (values[0] && !['files', 'network'].includes(values[0]))) break;
         return [
+          'FILES & NETWORKING',
           ...system.mission
-            .list()
+            .list(values[0])
             .map(
-              (item) =>
-                `${item.completed ? '✓' : item.available ? '→' : '·'} ${item.id.padEnd(14)} ${item.title} · ${item.reward} tokens`,
+              (m) =>
+                `${m.available ? '→' : '·'} ${m.id.padEnd(12)} ${'★'.repeat(m.stars)}${'☆'.repeat(2 - m.stars)} ${m.title}${m.available ? '' : ` (complete ${m.prerequisite})`}`,
             ),
-          '✓ completed; → available; · locked. Start an assignment with mission start <id>.',
+          '★ solved · ★★ automated. Automation stars are optional. Start with mission start <id>.',
           ...orientation(system),
         ];
       case 'start':
-        if (parameters.length !== 1) break;
-        return [system.mission.start(parameters[0]), ...objectiveHelp(system)];
+        if (values.length === 1)
+          return { clearScreen: true, output: system.mission.start(values[0]) };
+        break;
       case 'reset':
-        if (parameters.length) break;
-        return [
-          system.mission.reset(),
-          'Remote systems reset; your home files, tools, and upgrades are kept.',
-          ...objectiveHelp(system),
-        ];
+        if (!values.length) return { clearScreen: true, output: system.mission.reset() };
+        break;
+      case 'leave':
+        if (!values.length) return { clearScreen: true, output: system.mission.leave() };
+        break;
       case 'briefing':
-        if (parameters.length) break;
-        {
-          const current = system.mission.current();
-          return current
-            ? [
-                current.title,
-                current.briefing,
-                'Entry host: ' + current.entry + '. Connect with ssh ' + current.entry + '.',
-                ...objectiveHelp(system),
-              ]
-            : ['Use mission to see assignments, then mission start deployment.'];
-        }
+        if (!values.length) return system.mission.briefing();
+        break;
       case 'hint':
-        if (parameters.length) break;
-        return [
-          system.mission.current()?.hint ??
-            'Start with mission start deployment. Use guide start for the basics.',
-        ];
-      case 'submit':
-        if (parameters.length !== 1) break;
-        return [system.mission.submit(parameters[0])];
+        if (!values.length) return [system.mission.hint()];
+        break;
       case 'status':
-        if (parameters.length) break;
-        return [JSON.stringify(system.mission.status(), null, 2)];
+        if (!values.length) return [JSON.stringify(system.mission.status(), null, 2)];
+        break;
+      case 'submit':
+        if (values[0] === '--script' && (values.length === 2 || values.length === 3)) {
+          const seed = values[2] === undefined ? undefined : Number(values[2]);
+          if (
+            seed !== undefined &&
+            (!/^\d+$/.test(values[2]) || !Number.isSafeInteger(seed) || seed > 0xffffffff)
+          )
+            throw new Error('Seed must be an integer from 0 to 4294967295.');
+          return system.mission.verify(values[1], seed);
+        }
+        if (values.length === 1 && values[0] !== '--script')
+          return system.mission.submit(values[0]);
+        break;
     }
     throw new Error('Usage: ' + mission.usage);
   },

@@ -9,7 +9,8 @@
 - Keep command parsing and help consistent. Validate subcommands and their
   arguments, and show the concept's usage when input is invalid.
 - Update built-in help, onboarding, guides, examples, and tests together when
-  changing a command. Preserve player-owned files and historical transcripts.
+  changing a command. Preserve player-owned files. Terminal history is ephemeral
+  and must never be stored or restored from saves.
 - Established shell commands such as `ls`, `cd`, `cat`, `ssh`, and `exit` keep
   their familiar names; this convention concerns related game concept actions.
 
@@ -31,6 +32,12 @@
 - `help` lists only currently unlocked commands and ends with a hint explaining
   `help <command>`. Detailed help also hides locked commands. Use the command's
   unlock predicate for both help visibility and execution availability.
-- Keep the command set small. Do not add convenience wrappers for existing
-  operations: home files use `exit` and `ls`, and worker recovery uses page reload.
-  Keep playback controls under `simulation`, rather than separate command names.
+- Keep the command set small. Focus on files and networking; do not restore
+  retired simulations, screens, controllers, or their capability shop.
+- `exit` disconnects within a level. `mission leave` returns to the personal
+  workspace. Home is not a vertex in any level network.
+- Levels build on the same tools within a branch. One star means solved by any
+  method; two means a script solves fresh cases without intervention. Automation
+  stars and hints must never block ordinary progression.
+- Install starter skeletons and small API examples, never full solution scripts.
+  Complete solvers belong only in test fixtures.

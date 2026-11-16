@@ -50,7 +50,7 @@ export class CommandRegistry {
       throw new Error('Unknown command: ' + name + '. Run help for available commands.');
     if (command.unlocked && !command.unlocked(this.system)) {
       throw new Error(
-        'Command locked or unavailable in this mission: ' + name + '. Check help and upgrade list.',
+        'Command locked or unavailable in this level: ' + name + '. Check help and mission list.',
       );
     }
     return command.execute(args, this.system);

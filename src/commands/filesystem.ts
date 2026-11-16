@@ -71,7 +71,7 @@ export const filesystemCommands: readonly Command[] = [
     name: 'write',
     description: 'Create or replace a text file.',
     details:
-      'Replace the complete file contents on the current host. Quote text containing spaces; use single quotes around JSON to preserve its double quotes. The parent directory must exist. Remote writes are allowed only in paths permitted by the mission briefing.',
+      'Replace a workspace file in full. Quote text containing spaces; use single quotes around JSON to preserve its double quotes. The parent directory must exist. Level evidence is read-only; use edit /home/solve.js for your personal code notebook while inside a level.',
     example: 'write notes.txt "hello world"',
     usage: 'write <path> "text"',
     execute(args, system) {

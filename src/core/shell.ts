@@ -14,7 +14,7 @@ export interface ShellState {
   readonly entries: readonly TranscriptEntry[];
 }
 
-// Bound both in-memory history and the size of local saves.
+// Bound ephemeral in-memory history. Transcripts are never saved.
 export const MAX_ENTRIES = 200;
 export const MAX_INPUT_LENGTH = 4_000;
 export const MAX_OUTPUT_LENGTH = 20_000;
