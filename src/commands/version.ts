@@ -7,7 +7,7 @@ export const version: Command = {
   usage: 'version',
   description: 'Show the loaded game build.',
   details:
-    'Published versions identify the workflow run, attempt, and commit. Local builds show development. This identifies the code loaded in this tab, independently of your save.',
+    'Published versions identify the workflow run and commit. Local builds show development. This identifies the code loaded in this tab, independently of your save.',
   signatures: [{ parameters: [], result: string }],
   execute: () => ({ value: buildVersion }),
 };

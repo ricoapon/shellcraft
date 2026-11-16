@@ -43,7 +43,7 @@ jobs:
       - name: Set build version for compilation
         shell: bash
         run: |
-          echo "VITE_BUILD_VERSION=${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
+          echo "VITE_BUILD_VERSION=${GITHUB_RUN_NUMBER}-${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
 
       - name: Typecheck and build
         run: npm run build
