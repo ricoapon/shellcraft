@@ -209,6 +209,7 @@ export function App() {
                     key={view.settings.editor.path}
                     file={view.settings.editor}
                     vim={view.settings.vim}
+                    inLevel={!!view.mission}
                     inspect={async (source, offset) =>
                       (
                         await request('language', {

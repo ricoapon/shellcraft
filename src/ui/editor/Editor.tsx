@@ -15,16 +15,17 @@ const vimCommands = new WeakMap<object, (name: string, args: string) => void>();
   },
 };
 
+const syntaxRules = [
+  { token: 'keyword', foreground: 'C6A0F6' },
+  { token: 'string', foreground: 'A6DA95' },
+  { token: 'number', foreground: 'F5A97F' },
+  { token: 'comment', foreground: '87998D', fontStyle: 'italic' },
+  { token: 'delimiter', foreground: 'B8CAD1' },
+];
 monaco.editor.defineTheme('shellcraft', {
   base: 'vs-dark',
   inherit: true,
-  rules: [
-    { token: 'keyword', foreground: 'C6A0F6' },
-    { token: 'string', foreground: 'A6DA95' },
-    { token: 'number', foreground: 'F5A97F' },
-    { token: 'comment', foreground: '87998D', fontStyle: 'italic' },
-    { token: 'delimiter', foreground: 'B8CAD1' },
-  ],
+  rules: syntaxRules,
   colors: {
     'editor.background': '#101816',
     'editor.foreground': '#d7e3dc',
@@ -32,17 +33,36 @@ monaco.editor.defineTheme('shellcraft', {
     'editorCursor.foreground': '#8fdbab',
   },
 });
+monaco.editor.defineTheme('shellcraft-level', {
+  base: 'vs-dark',
+  inherit: true,
+  rules: syntaxRules,
+  colors: {
+    'editor.background': '#191321',
+    'editor.foreground': '#d7e3dc',
+    'editor.lineHighlightBackground': '#251a32',
+    'editorCursor.foreground': '#c7a5eb',
+    'editor.selectionBackground': '#46374f',
+    'editor.inactiveSelectionBackground': '#352b3e',
+    'editorLineNumber.foreground': '#ae9bbd',
+    'editorLineNumber.activeForeground': '#c7a5eb',
+    focusBorder: '#73538e',
+    'editorWidget.background': '#251a32',
+    'editorWidget.border': '#73538e',
+  },
+});
 
 interface Props {
   file: NonNullable<WorkstationSettings['editor']>;
   vim: boolean;
+  inLevel: boolean;
   inspect: Inspect;
   onDraft(text: string): void;
   onSave(text: string): Promise<void>;
   onExit(action: 'save' | 'discard' | 'run', text: string): Promise<void>;
 }
 
-export default function Editor({ file, vim, inspect, onDraft, onSave, onExit }: Props) {
+export default function Editor({ file, vim, inLevel, inspect, onDraft, onSave, onExit }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const status = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -63,7 +83,7 @@ export default function Editor({ file, vim, inspect, onDraft, onSave, onExit }: 
     );
     const instance = monaco.editor.create(container.current!, {
       model,
-      theme: 'shellcraft',
+      theme: inLevel ? 'shellcraft-level' : 'shellcraft',
       automaticLayout: true,
       fontSize: 14,
       minimap: { enabled: false },
@@ -147,6 +167,10 @@ export default function Editor({ file, vim, inspect, onDraft, onSave, onExit }: 
     };
     // A file change creates a fresh model; draft updates preserve the cursor.
   }, [file.path, vim]);
+
+  useEffect(() => {
+    editor.current?.updateOptions({ theme: inLevel ? 'shellcraft-level' : 'shellcraft' });
+  }, [inLevel]);
 
   useEffect(() => {
     if (file.line && editor.current) {
