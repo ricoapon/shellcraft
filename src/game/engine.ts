@@ -26,6 +26,7 @@ export interface EngineSnapshot {
 }
 export interface EngineReply {
   error?: string;
+  values?: import('../runtime/types').Value[];
   output: readonly string[];
   clearScreen?: true;
   host: string;
@@ -91,6 +92,7 @@ export class GameEngine {
   }
   async execute(input: string): Promise<EngineReply> {
     this.output = [];
+    let values: import('../runtime/types').Value[] = [];
     let clearScreen: true | undefined,
       action: EngineReply['action'],
       errorMessage: string | undefined;
@@ -101,6 +103,7 @@ export class GameEngine {
       const result = await this.terminal.submit(input);
       clearScreen = result.clearScreen;
       errorMessage = result.error;
+      values = result.values ?? [];
       action = result.action;
       for (const line of result.output ?? []) this.print(line);
     } catch (error) {
@@ -129,6 +132,7 @@ export class GameEngine {
     };
     return {
       output: this.output,
+      values,
       ...(errorMessage ? { error: errorMessage } : {}),
       clearScreen,
       host: this.world.host.id,

@@ -41,3 +41,12 @@
   stars and hints must never block ordinary progression.
 - Install starter skeletons and small API examples, never full solution scripts.
   Complete solvers belong only in test fixtures.
+
+## Shared language and testing
+
+- Game commands and native value operations share the Command interface, typed signatures, help, and registry. Put pure value operations under src/commands/values, generally one named operation per file. Do not introduce another function dispatcher.
+- Use Chevrotain for language syntax and RE2JS for player-provided regex patterns. Do not add a parallel shell parser or custom regex engine.
+- Prefer the browser-free driver for language, command, mission, and save checks: npm --silent run game -- --json -c "mission start files-1" -c "ls /notes".
+- Use --jsonl to keep a test session open. Requests support command, script, analyze, inspect, snapshot, and reset; responses include errors, rendered output, raw values, and the current view. See docs/testing.md.
+- The driver uses isolated in-memory state. Only --state writes an explicit test save; never point it at player-owned data. Use a browser for keyboard, focus, completion interaction, and layout checks.
+- Preserve the ability for one program to cross mission boundaries without losing execution state. Verification cases remain separate, constrained game environments.

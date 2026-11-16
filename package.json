@@ -32,8 +32,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write src tests scripts README.md AGENTS.md docs/implementation.md docs/player-guidance-review.md vite.config.ts",
-    "format:check": "prettier --check src tests scripts README.md AGENTS.md docs/implementation.md docs/player-guidance-review.md vite.config.ts",
+    "format": "prettier --write src tests scripts README.md AGENTS.md docs/implementation.md docs/player-guidance-review.md docs/language-spec.md docs/language-migration.md docs/testing.md vite.config.ts",
+    "format:check": "prettier --check src tests scripts README.md AGENTS.md docs/implementation.md docs/player-guidance-review.md docs/language-spec.md docs/language-migration.md docs/testing.md vite.config.ts",
+    "game": "node scripts/test-game.mjs",
     "make:showcase": "node scripts/create-showcase.mjs"
   },
   "overrides": {

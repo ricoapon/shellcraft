@@ -50,6 +50,10 @@ IndexedDB saves files, stars, the active level, and editor drafts. Terminal outp
 
 Regex matching uses **[RE2JS](https://github.com/le0pard/re2js)** with [RE2 syntax](https://github.com/google/re2/wiki/Syntax). Package versions are locked in package-lock.json. The game has no application server; player programs cannot access real files, networks, browser/Node globals, or npm packages.
 
+## Browser-free testing
+
+Run `npm --silent run game -- --json -c "mission start files-1" -c "ls /notes"` for structured responses from the real game without a browser. Use `--jsonl` for a persistent AI/tool session, `--script` for local source, and `--state` only when an explicit test save is wanted. See [testing guide](docs/testing.md).
+
 ## Checks
 
 ```sh

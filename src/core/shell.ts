@@ -33,6 +33,7 @@ export class Shell {
   readonly language: LanguageSession;
   private readonly registry: CommandRegistry;
   private lines: string[] = [];
+  private values: Value[] = [];
   private length = 0;
   private effects: CommandResult = {};
   constructor(
@@ -84,9 +85,11 @@ export class Shell {
   }
   private display(value: Value) {
     this.print(formatValue(value));
+    this.values.push(value);
   }
   async submit(input: string): Promise<CommandResult> {
     this.lines = [];
+    this.values = [];
     this.length = 0;
     this.effects = {};
     try {
@@ -96,7 +99,7 @@ export class Shell {
       this.effects.error = error instanceof Error ? error.message : String(error);
       this.lines.push(this.effects.error);
     }
-    return { ...this.effects, output: this.lines };
+    return { ...this.effects, output: this.lines, values: this.values };
   }
   async run(path: string, args: string[] = []): Promise<void> {
     if (!path.endsWith('.sc'))
