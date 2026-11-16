@@ -1,7 +1,8 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
 import { Terminal as Xterm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { Readline } from 'xterm-readline';
+import { Readline } from './readline';
+import { CommandHistory } from './history';
 
 import type { TranscriptEntry } from '../core/shell';
 import type { EngineReply } from '../game/engine';
@@ -55,6 +56,7 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
       });
       const fit = new FitAddon();
       const readline = new Readline();
+      const history = new CommandHistory();
       const highlightPrompt = (prompt: string) =>
         `${location().level ? '\x1b[38;2;199;165;235m' : '\x1b[38;2;143;219;171m'}${prompt}\x1b[39m`;
       let inputActive = false,
@@ -130,8 +132,24 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
         highlightPrompt,
       });
       readline.setCheckHandler((source) => !isIncomplete(source));
-      // Readline owns xterm's Shift+Enter handler. Capture Tab before xterm.
+      // Readline owns Shift+Enter. Capture completion and recall before xterm.
       const onKeyDown = (event: KeyboardEvent) => {
+        const plain = !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey;
+        if (plain && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          revision++;
+          lastTab = undefined;
+          if (inputActive) {
+            const recalled = history.move(event.key === 'ArrowUp' ? 'older' : 'newer', {
+              source: readline.getLine(),
+              cursor,
+            });
+            if (recalled) apply(recalled);
+          }
+          return;
+        }
+        if (event.ctrlKey && event.key.toLowerCase() === 'c') history.reset();
         if (
           event.key !== 'Tab' ||
           event.ctrlKey ||
@@ -190,7 +208,7 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
             `${highlightPrompt(plainText(formatPrompt(entry.workingDirectory ?? '/home', entry.host)))}${plainText(entry.input)}`,
           );
         writeOutput(entry.output);
-        if (!entry.input.startsWith('[')) readline.appendHistory(entry.input);
+        if (!entry.input.startsWith('[')) history.append(entry.input);
       }
 
       const controller = new AbortController();
@@ -226,6 +244,7 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
           revision++;
           lastTab = undefined;
           if (controller.signal.aborted) return;
+          history.append(input);
           let result: EngineReply;
           try {
             result = await execute(input);
@@ -236,6 +255,7 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
           }
           if (controller.signal.aborted) return;
           if (result.clearScreen) {
+            history.clear();
             // Clear the viewport and scrollback, then let readline draw a fresh prompt.
             readline.write('\x1b[2J\x1b[3J\x1b[H');
             writeOutput(result.output);

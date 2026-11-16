@@ -35,3 +35,5 @@ Starting/resetting/leaving a level clears terminal output/history and changes co
 ## Validation
 
 Regression tests cover parsing/types/recursion/imports, regex, scope/limits, shared shell/script results, multiline input, completion without side effects, campaign-spanning execution, every level with fresh-case verification, verification isolation, editor flows, saves and migration. The browser-free driver in scripts/test-game.mjs runs this same stack and returns structured JSON without opening browser storage. See docs/testing.md. Build and test results are recorded in the migration log after running the final checks.
+
+CommandHistory in src/ui/history.ts owns temporary command recall, independent of Readline cursor movement. Up/Down traverse complete submissions, including multiline source, and restore the draft and caret after the newest entry. Empty submissions and consecutive duplicates are skipped. Clearing the terminal clears recall. The Readline adapter disables its localStorage hooks before addon construction; history is never loaded from or written to browser storage or game saves.
