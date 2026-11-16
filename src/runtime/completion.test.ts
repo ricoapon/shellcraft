@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { GameEngine } from '../game/engine';
-import { completionEdit } from './completion';
+import { completionEdit, terminalCompletionEdit } from './completion';
 function fixture() {
   const game = new GameEngine(),
     fs = game.world.home.filesystem;
@@ -15,6 +15,43 @@ function fixture() {
 }
 const query = (game: GameEngine, source: string, cursor = source.length, path = '<terminal>') =>
   game.languageTools(source, path, cursor, path === '<terminal>');
+it('extends ambiguous matches only to their common prefix', () => {
+  const info = {
+    replaceFrom: 0,
+    replaceTo: 1,
+    completions: ['eee', 'eea'].map((label) => ({ label, insertText: label, detail: 'command' })),
+  };
+  expect(terminalCompletionEdit('e; echo after', 1, info)).toEqual({
+    source: 'ee; echo after',
+    cursor: 2,
+  });
+  expect(terminalCompletionEdit('ee', 2, { ...info, replaceTo: 2 })).toBeUndefined();
+  expect(terminalCompletionEdit('e', 1, { ...info, completions: [] })).toBeUndefined();
+  expect(
+    terminalCompletionEdit('e', 1, { ...info, completions: info.completions.slice(0, 1) }),
+  ).toEqual({ source: 'eee', cursor: 3 });
+});
+it('extends path prefixes with consistent quoting and preserves the caret and later source', () => {
+  const g = fixture(),
+    fs = g.world.home.filesystem;
+  fs.writeFile('/home/my notes/aaa.txt', 'a');
+  fs.writeFile('/home/my notes/aab.txt', 'b');
+  const source = 'cat "/home/my notes/aa"; echo after',
+    cursor = source.indexOf('";');
+  expect(terminalCompletionEdit(source, cursor, query(g, source, cursor))).toBeUndefined();
+  const start = 'cat /home/my; echo after',
+    position = start.indexOf(';');
+  expect(terminalCompletionEdit(start, position, query(g, start, position))).toEqual({
+    source: 'cat "/home/my notes/"; echo after',
+    cursor: 20,
+  });
+  const mixed = 'cat /home/li';
+  fs.writeFile('/home/library notes.txt', 'c');
+  expect(terminalCompletionEdit(mixed, mixed.length, query(g, mixed))).toEqual({
+    source: 'cat /home/library',
+    cursor: 17,
+  });
+});
 it('uses command argument metadata and filters directories and script files', () => {
   const g = fixture();
   expect(query(g, 'cd /home/').completions.map((c) => c.label)).toEqual([

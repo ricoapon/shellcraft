@@ -319,3 +319,46 @@ export function completionEdit(
     cursor: info.replaceFrom + (item.cursorOffset ?? item.insertText.length),
   };
 }
+
+/** Bash-style Tab: accept a unique match, otherwise extend only the shared prefix. */
+export function terminalCompletionEdit(
+  source: string,
+  cursor: number,
+  info: CompletionResult,
+): { source: string; cursor: number } | undefined {
+  const [first, ...others] = info.completions;
+  if (!first) return;
+  if (!others.length) return completionEdit(source, info, first);
+  let prefix = first.label;
+  for (const item of others) {
+    let length = 0;
+    while (length < prefix.length && prefix[length] === item.label[length]) length++;
+    prefix = prefix.slice(0, length);
+  }
+  const raw = source.slice(info.replaceFrom, cursor);
+  const quoted = raw.startsWith('"') || raw.startsWith("'");
+  const typed = quoted ? decode(raw) : raw;
+  if (prefix.length <= typed.length || !prefix.startsWith(typed)) return;
+  if (info.completions.every((item) => item.kind === 'file' || item.kind === 'directory')) {
+    // Encode the shared path itself: candidates may need different quoting.
+    // Keep any later path components when completing in the middle of a path.
+    const remainder = source.slice(cursor, info.replaceTo).replace(quoted ? /['"]$/ : /$^/, '');
+    const slash = remainder.indexOf('/');
+    const tail = slash < 0 ? '' : remainder.slice(slash + (prefix.endsWith('/') ? 1 : 0));
+    const value = prefix + tail;
+    const quote =
+      raw.startsWith("'") && !value.includes("'")
+        ? "'"
+        : quoted || !/^[A-Za-z0-9_./-]+$/.test(value)
+          ? '"'
+          : '';
+    const encode = (text: string) =>
+      quote === "'" ? "'" + text + "'" : quote === '"' ? JSON.stringify(text) : text;
+    return completionEdit(source, info, {
+      ...first,
+      insertText: encode(value),
+      cursorOffset: encode(prefix).length - (quote ? 1 : 0),
+    });
+  }
+  return completionEdit(source, info, { ...first, insertText: prefix, cursorOffset: undefined });
+}

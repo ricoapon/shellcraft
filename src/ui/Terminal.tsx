@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import { Terminal as Xterm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { Readline } from 'xterm-readline';
@@ -7,8 +7,7 @@ import type { TranscriptEntry } from '../core/shell';
 import type { EngineReply } from '../game/engine';
 import type { LanguageTools } from '../runtime/tools';
 import { isIncomplete } from '../runtime/syntax';
-import { completionEdit } from '../runtime/completion';
-import type { CompletionItem } from '../runtime/completion';
+import { terminalCompletionEdit } from '../runtime/completion';
 import { highlightSource } from '../runtime/highlight';
 import '@xterm/xterm/css/xterm.css';
 
@@ -32,20 +31,6 @@ function plainText(text: string): string {
 
 export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource, inspect }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  const [completion, setCompletion] = useState<{
-    items: CompletionItem[];
-    selected: number;
-    left: number;
-    top?: number;
-    bottom?: number;
-  }>();
-  const acceptCompletion = useRef<((index: number) => void) | undefined>(undefined);
-  const completionList = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    completionList.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({
-      block: 'nearest',
-    });
-  }, [completion]);
   // Startup data is replayed once; React updates must not reset the live terminal.
   const savedEntries = useRef(initialEntries);
   const inspectSource = useEffectEvent(inspect);
@@ -76,75 +61,49 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
         applying = false,
         sourceLine = '',
         cursor = 0,
-        requestId = 0;
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      let menu:
-        { source: string; cursor: number; info: LanguageTools; selected: number } | undefined;
-      const hide = () => {
-        menu = undefined;
-        setCompletion(undefined);
-      };
-      const publish = () => {
-        if (!menu) return;
-        const rect = element.getBoundingClientRect(),
-          cellHeight = rect.height / terminal.rows,
-          cellWidth = rect.width / terminal.cols;
-        const y = terminal.buffer.active.cursorY * cellHeight;
-        setCompletion({
-          items: menu.info.completions.slice(0, 100),
-          selected: menu.selected,
-          left: Math.max(0, Math.min(terminal.buffer.active.cursorX * cellWidth, rect.width - 420)),
-          ...(y > 240 ? { bottom: Math.max(0, rect.height - y) } : { top: y + cellHeight }),
-        });
-      };
-      const apply = (index: number) => {
-        if (!menu || menu.source !== readline.getLine() || menu.cursor !== cursor) return;
-        const item = menu.info.completions[index];
-        if (!item) return;
-        const edit = completionEdit(menu.source, menu.info, item);
-        requestId++;
-        clearTimeout(timer);
+        revision = 0;
+      let lastTab: { source: string; cursor: number } | undefined;
+      let listing: { source: string; cursor: number; labels: string[] } | undefined;
+      let restore: { source: string; cursor: number } | undefined;
+      let promptController: AbortController | undefined;
+      let completionQueue = Promise.resolve();
+      const apply = (edit: { source: string; cursor: number }) => {
         applying = true;
-        hide();
         readline.updateLine(edit.source);
         const backwards = Array.from(edit.source.slice(edit.cursor)).length;
         if (backwards) terminal.input('\x1b[D'.repeat(backwards), false);
         sourceLine = edit.source;
         cursor = edit.cursor;
         applying = false;
-        terminal.focus();
-        if (item.kind === 'directory') schedule(edit.source, edit.cursor, false);
       };
-      acceptCompletion.current = apply;
-      const request = async (source: string, position: number, acceptSingle: boolean) => {
-        const id = ++requestId;
-        try {
-          const info = await inspectSource(source, position);
-          if (
-            !inputActive ||
-            id !== requestId ||
-            readline.getLine() !== source ||
-            cursor !== position
-          )
-            return;
-          if (!info.completions.length) {
-            hide();
-            return;
-          }
-          menu = { source, cursor: position, info, selected: 0 };
-          if (acceptSingle && info.completions.length === 1) apply(0);
-          else publish();
-        } catch {
-          if (id === requestId) hide();
-        }
-      };
-      const schedule = (source: string, position: number, explicit: boolean) => {
-        clearTimeout(timer);
-        if (!explicit && !source.slice(0, position).trim()) {
-          hide();
+      const complete = async (version: number) => {
+        if (!inputActive || version !== revision) return;
+        const source = readline.getLine(),
+          position = cursor;
+        const info = await inspectSource(source, position);
+        if (
+          !inputActive ||
+          version !== revision ||
+          readline.getLine() !== source ||
+          cursor !== position
+        )
           return;
-        }
-        timer = setTimeout(() => void request(source, position, false), 140);
+        const edit = terminalCompletionEdit(source, position, info);
+        if (edit && (edit.source !== source || edit.cursor !== position)) {
+          lastTab = undefined;
+          apply(edit);
+        } else if (info.completions.length > 1) {
+          if (lastTab?.source === source && lastTab.cursor === position) {
+            listing = {
+              source,
+              cursor: position,
+              labels: info.completions.map((item) => item.label),
+            };
+            lastTab = undefined;
+            inputActive = false;
+            promptController?.abort();
+          } else lastTab = { source, cursor: position };
+        } else lastTab = undefined;
       };
       readline.setHighlighter({
         highlight: (line, position) => {
@@ -152,10 +111,18 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
             sourceLine = line;
             cursor = position;
             if (!applying) {
-              requestId++;
-              hide();
-              schedule(line, position, false);
+              revision++;
+              lastTab = undefined;
             }
+          }
+          if (restore) {
+            const edit = restore;
+            restore = undefined;
+            // Readline has just anchored the fresh prompt. Restore the draft
+            // after its initial refresh finishes, including the original caret.
+            queueMicrotask(() => {
+              if (inputActive) apply(edit);
+            });
           }
           return highlightSource(line);
         },
@@ -163,51 +130,28 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
         highlightPrompt,
       });
       readline.setCheckHandler((source) => !isIncomplete(source));
-      const handleCompletionKey = (event: KeyboardEvent) => {
-        if (event.type !== 'keydown') return true;
-        const completionKey =
-          event.key === 'Tab' || ((event.ctrlKey || event.metaKey) && event.code === 'Space');
-        if (completionKey) {
-          event.preventDefault();
-          if (!inputActive) return false;
-          clearTimeout(timer);
-          if (event.key === 'Tab' && menu) {
-            if (event.shiftKey) {
-              menu.selected =
-                (menu.selected - 1 + Math.min(100, menu.info.completions.length)) %
-                Math.min(100, menu.info.completions.length);
-              publish();
-            } else apply(menu.selected);
-          } else void request(readline.getLine(), cursor, event.key === 'Tab');
-          return false;
-        }
-        if (menu && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-          event.preventDefault();
-          const count = Math.min(100, menu.info.completions.length);
-          menu.selected = (menu.selected + (event.key === 'ArrowDown' ? 1 : count - 1)) % count;
-          publish();
-          return false;
-        }
-        if (event.key === 'Escape') {
-          requestId++;
-          clearTimeout(timer);
-          hide();
-          return false;
-        }
-        if (event.key === 'Enter') {
-          requestId++;
-          clearTimeout(timer);
-          hide();
-        }
-        return true;
-      };
-      // Readline installs xterm's custom handler for Shift+Enter. Capture only
-      // completion keys before xterm so both handlers keep their own shortcuts.
+      // Readline owns xterm's Shift+Enter handler. Capture Tab before xterm.
       const onKeyDown = (event: KeyboardEvent) => {
-        if (!handleCompletionKey(event)) {
-          event.preventDefault();
-          event.stopImmediatePropagation();
+        if (
+          event.key !== 'Tab' ||
+          event.ctrlKey ||
+          event.altKey ||
+          event.metaKey ||
+          event.shiftKey
+        ) {
+          revision++;
+          lastTab = undefined;
+          return;
         }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!inputActive) return;
+        const version = revision;
+        completionQueue = completionQueue
+          .then(() => complete(version))
+          .catch(() => {
+            lastTab = undefined;
+          });
       };
       element.addEventListener('keydown', onKeyDown, true);
       terminal.loadAddon(fit);
@@ -262,14 +206,25 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
           inputActive = true;
           sourceLine = '';
           cursor = 0;
-          const input = await readline.read(
-            plainText(formatPrompt(current.directory, current.host)),
-            { signal: controller.signal },
-          );
+          promptController = new AbortController();
+          let input: string;
+          try {
+            input = await readline.read(plainText(formatPrompt(current.directory, current.host)), {
+              signal: AbortSignal.any([controller.signal, promptController.signal]),
+            });
+          } catch (error) {
+            if (controller.signal.aborted) return;
+            if (!listing) throw error;
+            // End the displayed input line, list matches, then read the same
+            // draft again. Nothing is submitted or added to command history.
+            readline.println('\r\n' + listing.labels.map(plainText).join('  '));
+            restore = { source: listing.source, cursor: listing.cursor };
+            listing = undefined;
+            continue;
+          }
           inputActive = false;
-          requestId++;
-          clearTimeout(timer);
-          hide();
+          revision++;
+          lastTab = undefined;
           if (controller.signal.aborted) return;
           let result: EngineReply;
           try {
@@ -300,9 +255,7 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
       observer.observe(element);
       dispose = () => {
         inputActive = false;
-        requestId++;
-        clearTimeout(timer);
-        acceptCompletion.current = undefined;
+        revision++;
         element.removeEventListener('keydown', onKeyDown, true);
         controller.abort();
 
@@ -320,34 +273,6 @@ export function Terminal({ initialEntries, getLocation, onCommand, onOpenSource,
   return (
     <section className="terminal-panel" aria-label="Terminal">
       <div ref={host} className="terminal-output" />
-      {completion && (
-        <div
-          ref={completionList}
-          className="terminal-completions"
-          role="listbox"
-          aria-label="Shell completions"
-          style={{ left: completion.left, top: completion.top, bottom: completion.bottom }}
-        >
-          {completion.items.map((item, index) => (
-            <div
-              key={item.label}
-              role="option"
-              aria-selected={index === completion.selected}
-              className={
-                index === completion.selected ? 'completion-option selected' : 'completion-option'
-              }
-              onMouseDown={(event) => {
-                event.preventDefault();
-                acceptCompletion.current?.(index);
-              }}
-            >
-              <span className="completion-label">{item.label}</span>
-              <span className="completion-detail">{item.detail}</span>
-            </div>
-          ))}
-          <div className="completion-hint">Tab accept · ↑↓ choose · Esc dismiss</div>
-        </div>
-      )}
     </section>
   );
 }
