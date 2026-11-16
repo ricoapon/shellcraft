@@ -238,7 +238,7 @@ export default function Editor({ file, vim, inspect, onDraft, onSave, onExit }: 
   return (
     <section className="editor-pane" aria-label="Code editor">
       <div className="editor-file" title={file.path}>
-        Code notebook — {file.path}
+        {file.path}
         {dirty ? ' •' : ''}
       </div>
       <div className="monaco-container" ref={container} />
@@ -246,7 +246,7 @@ export default function Editor({ file, vim, inspect, onDraft, onSave, onExit }: 
         <span className="editor-shortcuts">
           {vim
             ? ':run save, quit & run'
-            : 'Ctrl+S save & exit · Ctrl+Q discard & exit · Ctrl+Enter save, exit & run'}
+            : 'Ctrl+S save & exit / Ctrl+Q discard & exit / Ctrl+Enter save, exit & run'}
         </span>
         <span className="vim-status" ref={status} />
         {message && (
