@@ -48,6 +48,31 @@ it('exposes regex and string commands directly with static overload checking', a
   expect((await g.execute('slice 1 2 "a😀b"')).output).toEqual(['😀']);
   expect((await g.execute('count "a😀b"')).output).toEqual(['3']);
 });
+it('selects regex captures while preserving match order, empty captures, and script values', async () => {
+  const g = new GameEngine();
+  expect((await g.execute('match "r([0-9]+)" "r42 b17 r7"')).values).toEqual([['r42', 'r7']]);
+  expect((await g.execute('match "r([0-9]+)" "r42 b17 r7" 0')).values).toEqual([['r42', 'r7']]);
+  expect((await g.execute('match "r([0-9]+)" "r42 b17 r7" 1')).values).toEqual([['42', '7']]);
+  expect((await g.execute('match "(r([0-9]+))" "r42" 2')).values).toEqual([['42']]);
+  expect((await g.execute('match "(x)" "none" 1')).values).toEqual([[]]);
+  expect((await g.execute('match "(a)?b" "b ab" 1')).values).toEqual([['', 'a']]);
+  expect((await g.execute('match "(a?)" "b" 1')).values).toEqual([['', '']]);
+  g.world.home.filesystem.writeFile(
+    '/home/capture.sc',
+    'let content = "PASSWORD=key-123"; let passwords = (match "PASSWORD=(.+)" $content 1); echo $passwords[0]',
+  );
+  expect((await g.execute('run /home/capture.sc')).output).toEqual(['key-123']);
+});
+it('rejects invalid regex groups, including when the input has no matches', async () => {
+  const g = new GameEngine();
+  for (const group of ['-1', '0.5', '9007199254740992'])
+    expect((await g.execute('match "(x)" "none" ' + group)).error).toContain(
+      'non-negative integer',
+    );
+  expect((await g.execute('match "(x)" "none" 2')).error).toContain('does not exist');
+  expect((await g.execute('match "x" "none" 1')).error).toContain('does not exist');
+  expect((await g.execute('match "(x)" "x" "1"')).error).toContain('Expected number');
+});
 it('requires double-quoted text and rejects missing variable sigils before any effects', async () => {
   const g = new GameEngine();
   await g.execute('let content = "active=true\\nPASSWORD=secret"');

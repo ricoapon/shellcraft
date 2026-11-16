@@ -22,7 +22,7 @@ Files and progress are saved. Terminal output, history, and variables are tempor
 `,
   '/home/solve.sc': starterSource,
   '/home/example.sc':
-    '# Individual operations, not a mission solver.\nlet text = "release=r42"\necho (split "=" $text)\necho (match "[0-9]+" $text)\n',
+    '# Individual operations, not a mission solver.\nlet text = "release=r42"\necho (split "=" $text)\necho (match "release=(r[0-9]+)" $text 1)\n',
 };
 export function installHomeFiles(filesystem: VirtualFileSystem) {
   for (const [path, text] of Object.entries(homeFiles)) {

@@ -48,6 +48,8 @@ IndexedDB saves files, stars, the active level, and editor drafts. Terminal outp
 - `src/ui/`: xterm and Monaco/Vim workstation.
 - `tests/fixtures/`: complete solvers, never installed in player workspaces.
 
+`match <pattern> <text> [group]` returns a list of strings. Omit group (or use 0) for whole matches; use 1 for the first capture group. For example, `match "release=(r[0-9]+)" "release=r42" 1` returns `["r42"]`.
+
 Regex matching uses **[RE2JS](https://github.com/le0pard/re2js)** with [RE2 syntax](https://github.com/google/re2/wiki/Syntax). Package versions are locked in package-lock.json. The game has no application server; player programs cannot access real files, networks, browser/Node globals, or npm packages.
 
 ## Browser-free testing
