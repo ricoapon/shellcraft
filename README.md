@@ -67,7 +67,7 @@ npm run format:check
 
 ## GitHub Pages deployment
 
-In the repository's Settings > Pages, select **GitHub Actions** as the build source once. Pushes to main then run .github/workflows/pages.yml: npm ci, formatting, the full test suite, and the production build (including TypeScript checks). Only a successful build is uploaded from dist and deployed. The workflow can also be started manually on main. It uses Node.js 24 and GitHub's Pages artifact/deployment actions; no personal access token or gh-pages branch is needed.
+In the repository's Settings > Pages, select **GitHub Actions** as the build source once. Pushes to main then run .github/workflows/deploy-to-gh-pages.yml: npm ci, formatting, the full test suite, and the production build (including TypeScript checks). Only a successful build is uploaded from dist and deployed. It uses Node.js 24 and GitHub's Pages artifact/deployment actions; no personal access token or gh-pages branch is needed.
 
 The workflow reads the configured Pages base path, so project assets work under /shellcraft/ and custom-domain sites can use /. For a local project-path build, set VITE_BASE_PATH=/shellcraft/ before npm run build; ordinary local builds use /.
 
