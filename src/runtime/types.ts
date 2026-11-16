@@ -82,7 +82,7 @@ export interface Signature {
   typeParameter?: boolean;
 }
 export interface NativeCommand {
-  name: string;
+  readonly name: string;
   signatures: readonly Signature[];
 }
 export interface LanguageHost {

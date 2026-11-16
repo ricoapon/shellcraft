@@ -1,9 +1,12 @@
 import type { Command } from './command';
-
-/** A minimal example command using the same boundary as game commands. */
+import { generic, nothing } from '../runtime/types';
 export const echo: Command = {
   name: 'echo',
-  description: 'Print text.',
-  usage: 'echo [text...]',
-  execute: (args) => [args.join(' ')],
+  usage: 'echo <value>',
+  description: 'Display a value.',
+  signatures: [{ parameters: [generic], result: nothing }],
+  execute(args, system) {
+    system.display(args[0]);
+    return {};
+  },
 };

@@ -1,14 +1,16 @@
-import { requireArguments, type Command } from './command';
+import { stringArguments, type Command } from './command';
+import { nothing, string } from '../runtime/types';
 export const run: Command = {
   name: 'run',
   usage: 'run <workspace-path> [args...]',
-  description: 'Run your saved JavaScript.',
+  description: 'Run a Shellcraft script.',
   details:
-    'Run a module from your personal /home code workspace. Export main(ctx,args). ctx.fs reads the current host. Imports resolve only within /home. Scripting is available from the start.',
-  example: 'run /home/solve.js',
-  unlocked: (system) => system.capabilities.has('scripting'),
-  execute(args, system) {
-    requireArguments(args, 1, run.usage!, 100);
-    return system.scripts.run(args[0], args.slice(1)).then(() => []);
+    'Executes .sc source in a fresh variable scope. Commands and navigation behave exactly as in the shell.',
+  example: 'run /home/solve.sc',
+  signatures: [{ parameters: [string], rest: string, result: nothing, terminalOnly: true }],
+  execute: async (args, system) => {
+    const [path, ...values] = stringArguments(args);
+    await system.scripts.run(path, values);
+    return {};
   },
 };

@@ -1,5 +1,6 @@
 import type { Command, CommandInfo, CommandResult } from './command';
 import type { CommandSystem } from './system';
+import type { Type, Value } from '../runtime/types';
 
 /** The same registry drives execution, help, and reserved command names. */
 export class CommandRegistry {
@@ -44,7 +45,15 @@ export class CommandRegistry {
       }));
   }
 
-  execute(name: string, args: readonly string[]): CommandResult | Promise<CommandResult> {
+  definitions(): readonly Command[] {
+    return [...this.commands.values()];
+  }
+
+  execute(
+    name: string,
+    args: readonly Value[],
+    typeArgument?: Type,
+  ): CommandResult | Promise<CommandResult> {
     const command = this.commands.get(name);
     if (!command)
       throw new Error('Unknown command: ' + name + '. Run help for available commands.');
@@ -53,6 +62,6 @@ export class CommandRegistry {
         'Command locked or unavailable in this level: ' + name + '. Check help and mission list.',
       );
     }
-    return command.execute(args, this.system);
+    return command.execute(args, this.system, typeArgument);
   }
 }

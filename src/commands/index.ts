@@ -12,6 +12,8 @@ import { clear } from './clear';
 import { help } from './help';
 import { filesystemCommands } from './filesystem';
 import type { Command } from './command';
+import { stringCommands } from './strings';
+import { hostname } from './hostname';
 export const builtinCommands: readonly Command[] = [
   guide,
   save,
@@ -26,4 +28,6 @@ export const builtinCommands: readonly Command[] = [
   clear,
   help,
   ...filesystemCommands,
+  hostname,
+  ...stringCommands,
 ];

@@ -1,31 +1,33 @@
-import { requireArguments, type Command } from './command';
-
+import { stringArguments, type Command } from './command';
+import { list, string } from '../runtime/types';
 export const help: Command = {
   name: 'help',
   description: 'List available commands.',
-  details:
-    'Use help <command> for usage, details, and examples. Only unlocked commands are listed.',
   usage: 'help [command]',
+  details: 'Only available commands appear. Detailed help shows usage, details, and examples.',
+  signatures: [{ parameters: [string], minimum: 0, result: list(string) }],
   execute(args, system) {
-    requireArguments(args, 0, help.usage!, 1);
-    const commands = system.commands.list();
-    if (args[0]) {
-      const command = commands.find((command) => command.name === args[0]);
-      if (!command) throw new Error('Unknown command: ' + args[0]);
-      return [
-        'Usage: ' + (command.usage ?? command.name),
-        ...(command.description ? [command.description] : []),
-        ...(command.details ? [command.details] : []),
-        ...(command.example ? ['Example: ' + command.example] : []),
-      ];
+    const [name] = stringArguments(args),
+      commands = system.commands.list();
+    if (name) {
+      const command = commands.find((c) => c.name === name);
+      if (!command) throw new Error('Unknown command: ' + name);
+      return {
+        value: [
+          'Usage: ' + (command.usage ?? command.name),
+          ...(command.description ? [command.description] : []),
+          ...(command.details ? [command.details] : []),
+          ...(command.example ? ['Example: ' + command.example] : []),
+        ],
+      };
     }
-    return [
-      ...[...commands]
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((command) =>
-          command.description ? command.name + ' — ' + command.description : command.name,
-        ),
-      'Run help <command> for more information.',
-    ];
+    return {
+      value: [
+        ...[...commands]
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((c) => (c.description ? c.name + ' — ' + c.description : c.name)),
+        'Run help <command> for more information.',
+      ],
+    };
   },
 };

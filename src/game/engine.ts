@@ -1,7 +1,6 @@
-import { parseCommand } from '../core/parse';
+import { Shell } from '../core/shell';
 import { resolvePath } from '../core/path';
 import { builtinCommands } from '../commands';
-import { CommandRegistry } from '../commands/registry';
 import type { CommandSystem } from '../commands/system';
 import type { ShellState } from '../core/shell';
 import { SessionFileSystem } from '../core/session-filesystem';
@@ -12,7 +11,6 @@ import type { Progress } from './campaign';
 import { missions } from '../content/missions';
 import { installHomeFiles } from '../content/home';
 import { welcomeMessage } from '../content/player-support';
-import { PlayerModule } from '../runtime/player-runtime';
 export interface WorkstationSettings {
   vim: boolean;
   editor?: { path: string; draft: string; saved?: string; line?: number };
@@ -42,10 +40,9 @@ export class GameEngine {
   readonly campaign: Campaign;
   readonly settings: WorkstationSettings;
   readonly system: CommandSystem;
-  private readonly commands: CommandRegistry;
+  private readonly terminal: Shell;
   shell: ShellState = { entries: [] };
   private output: string[] = [];
-  private readCount = 0;
   constructor(snapshot?: EngineSnapshot) {
     this.world = new World(undefined, snapshot?.world);
     this.campaign = new Campaign(this.world, snapshot?.progress ?? freshProgress());
@@ -60,7 +57,9 @@ export class GameEngine {
       file.saved = saved?.type === 'file' ? saved.content : undefined;
     }
     this.system = this.createCommandSystem();
-    this.commands = new CommandRegistry(builtinCommands, this.system);
+    this.terminal = new Shell(builtinCommands, this.system, (path) =>
+      this.world.home.filesystem.readFile(this.homePath(path)),
+    );
   }
   async initialize() {
     this.banner();
@@ -90,23 +89,15 @@ export class GameEngine {
       directory = this.world.session.workingDirectory;
     if (!input.trim()) return { output: [], host, directory };
     try {
-      if (input.length > 4000)
-        throw new Error('Command is too long (maximum 4000 characters). Put programs in a script.');
-      const [name, ...args] = parseCommand(input);
-      const result = await this.commands.execute(name, args);
-      if ('clearScreen' in result && result.clearScreen) clearScreen = true;
-      if ('action' in result) action = result.action;
-      const lines = Array.isArray(result)
-        ? result
-        : 'output' in result
-          ? (result.output ?? [])
-          : [];
-      for (const line of lines) this.print(line);
+      const result = await this.terminal.submit(input);
+      clearScreen = result.clearScreen;
+      action = result.action;
+      for (const line of result.output ?? []) this.print(line);
     } catch (error) {
       this.output.push(error instanceof Error ? error.message : String(error));
     }
     const entry = {
-      input: input.slice(0, 4000),
+      input: input.slice(0, 250000),
       output: this.output.length ? [this.output.join('\n')] : [],
       host,
       workingDirectory: directory,
@@ -136,7 +127,8 @@ export class GameEngine {
   private createCommandSystem(): CommandSystem {
     return {
       capabilities: { has: (id) => this.campaign.capabilities().includes(id) },
-      commands: { list: () => this.commands.available() },
+      commands: { list: () => this.terminal.available() },
+      display: (value) => this.print(value),
       filesystem: new SessionFileSystem(
         () => this.world.session,
         (path) => this.campaign.assertWritable(path),
@@ -237,97 +229,7 @@ export class GameEngine {
   }
   async run(path: string, args: string[] = []) {
     this.campaign.requireCapability('scripting');
-    path = this.homePath(path);
-    this.readCount = 0;
-    const module = await PlayerModule.create(
-      path,
-      (file) => this.world.home.filesystem.readFile(this.homePath(file)),
-      (name, values) => this.api(name, values),
-    );
-    try {
-      module.invoke('main', args);
-    } finally {
-      module.dispose();
-    }
-    this.print(`Script finished: ${this.readCount} files read.`);
-  }
-  private api(name: string, args: unknown[]): unknown {
-    const text = (index: number, fallback = '') =>
-      args[index] == null ? fallback : String(args[index]);
-    if (name === 'print') {
-      this.print(args[0]);
-      return;
-    }
-    if (name === 'session.info')
-      return { host: this.world.host.id, workingDirectory: this.world.session.workingDirectory };
-    if (name === 'session.connect') {
-      this.campaign.requireHost(text(0));
-      this.world.connect(text(0));
-      return;
-    }
-    if (name === 'session.exit') {
-      this.world.exit();
-      return;
-    }
-    if (name === 'network.neighbors') {
-      this.campaign.requireCapability('network');
-      return this.campaign.neighbors(args[0] == null ? undefined : text(0));
-    }
-    if (name === 'network.connect') {
-      this.campaign.requireCapability('network');
-      this.campaign.requireHost(text(0));
-      return text(0);
-    }
-    if (name.startsWith('fs.')) {
-      const explicit = args[0] != null,
-        id = explicit ? text(0) : this.world.host.id;
-      if (explicit) this.campaign.requireHost(id);
-      const fs = explicit ? this.world.requireHost(id).filesystem : this.world.session.filesystem;
-      const cwd = explicit ? '/' : this.world.session.workingDirectory;
-      const path = text(1, '.');
-      if (name === 'fs.list') return fs.list(path, cwd);
-      if (name === 'fs.stat') return fs.stat(path, cwd);
-      if (name === 'fs.read') {
-        const content = fs.readFile(path, cwd);
-        this.readCount++;
-        return content;
-      }
-      throw new Error(
-        'Script filesystem access is read-only. Store your own data with ctx.storage.',
-      );
-    }
-    if (name === 'storage.get')
-      return Object.hasOwn(this.campaign.progress.playerData, text(0))
-        ? this.campaign.progress.playerData[text(0)]
-        : undefined;
-    if (name === 'storage.set') {
-      const replacement = { ...this.campaign.progress.playerData, [text(0)]: args[1] };
-      if (JSON.stringify(replacement).length > 250000)
-        throw new Error('Player storage limit reached (250 KB).');
-      Object.defineProperty(this.campaign.progress.playerData, text(0), {
-        value: structuredClone(args[1]),
-        enumerable: true,
-        configurable: true,
-        writable: true,
-      });
-      return;
-    }
-    if (name === 'storage.delete') {
-      delete this.campaign.progress.playerData[text(0)];
-      return;
-    }
-    if (name === 'mission.briefing') return this.campaign.definition?.briefing;
-    if (name === 'mission.status')
-      return {
-        id: this.campaign.progress.active?.id,
-        status: this.campaign.progress.active?.status,
-      };
-    if (name === 'mission.submit') {
-      for (const line of this.campaign.submit(text(0))) this.print(line);
-      return this.campaign.active.status === 'complete';
-    }
-    if (name === 'capabilities') return this.campaign.capabilities();
-    throw new Error('Unknown game API: ' + name);
+    await this.terminal.run(this.homePath(path), args);
   }
   /** A verification run owns separate evidence, storage and interpreters; exploration is untouched. */
   async verify(path: string, practiceSeed?: number): Promise<readonly string[]> {

@@ -1,78 +1,82 @@
-import type { Command } from './command';
-import type { CommandSystem } from './system';
-function orientation(system: CommandSystem): string[] {
-  const current = system.mission.current();
-  if (current?.status === 'active')
-    return [`Current level: ${current.id}. Use mission briefing or mission hint.`];
-  const levels = system.mission.list();
-  const choices = ['files', 'network'].flatMap((group) => {
-    const next = levels.find(
-      (level) => level.group === group && level.available && level.stars === 0,
-    );
-    return next ? [`Next in ${group}: mission start ${next.id} — ${next.title}.`] : [];
-  });
-  return choices.length
-    ? choices
-    : [
-        'Both branches complete. Return for optional automation stars or experiment with your tools.',
-      ];
-}
+import { stringArguments, type Command } from './command';
+import { bool, list, nothing, number, record, string } from '../runtime/types';
+const levelType = record({
+  id: string,
+  title: string,
+  group: string,
+  stars: number,
+  available: bool,
+  prerequisite: string,
+});
 export const mission: Command = {
   name: 'mission',
   description: 'Choose levels and submit solutions.',
   usage:
     'mission [list [files|network] | start <id> | reset | leave | briefing | hint | status | submit <answer> | submit --script <path> [seed]]',
   details:
-    'One star means solved; two means your program solves fresh instances without manual intervention. Hints are free and do not affect stars. Submit scripts exporting main(ctx,args), using ctx.mission.submit(value). An optional seed replays one practice case without awarding stars. Leaving discards the current instance, keeping your files and best stars.',
-  example: 'mission start files-1',
-  execute(args, system) {
-    const [action = 'list', ...values] = args;
+    'One star means solved; two means a script solves fresh cases. Hints do not affect stars. Programs may start and leave missions. Verification runs independently.',
+  signatures: [
+    { parameters: [], result: list(levelType) },
+    { prefix: ['list'], parameters: [string], minimum: 0, result: list(levelType) },
+    { prefix: ['start'], parameters: [string], result: nothing },
+    ...['reset', 'leave'].map((word) => ({ prefix: [word], parameters: [], result: nothing })),
+    ...['briefing', 'hint'].map((word) => ({ prefix: [word], parameters: [], result: string })),
+    { prefix: ['status'], parameters: [], result: record({ id: string, status: string }) },
+    {
+      prefix: ['submit', '--script'],
+      parameters: [string, number],
+      minimum: 1,
+      result: nothing,
+      terminalOnly: true,
+    },
+    { prefix: ['submit'], parameters: [string], result: bool },
+  ],
+  async execute(args, system) {
+    const action = args[0] ?? 'list',
+      values = args.slice(1);
     switch (action) {
-      case 'list':
-        if (values.length > 1 || (values[0] && !['files', 'network'].includes(values[0]))) break;
-        return [
-          'FILES & NETWORKING',
-          ...system.mission
-            .list(values[0])
-            .map(
-              (m) =>
-                `${m.available ? '→' : '·'} ${m.id.padEnd(12)} ${'★'.repeat(m.stars)}${'☆'.repeat(2 - m.stars)} ${m.title}${m.available ? '' : ` (complete ${m.prerequisite})`}`,
-            ),
-          '★ solved · ★★ automated. Automation stars are optional. Start with mission start <id>.',
-          ...orientation(system),
-        ];
+      case 'list': {
+        const [group] = stringArguments(values);
+        if (group && !['files', 'network'].includes(group))
+          throw new Error('Usage: ' + mission.usage);
+        return {
+          value: system.mission
+            .list(group)
+            .map((m) => ({ ...m, prerequisite: m.prerequisite ?? '' })),
+        };
+      }
       case 'start':
-        if (values.length === 1)
-          return { clearScreen: true, output: system.mission.start(values[0]) };
-        break;
+        return { clearScreen: true, output: system.mission.start(stringArguments(values)[0]) };
       case 'reset':
-        if (!values.length) return { clearScreen: true, output: system.mission.reset() };
-        break;
+        return { clearScreen: true, output: system.mission.reset() };
       case 'leave':
-        if (!values.length) return { clearScreen: true, output: system.mission.leave() };
-        break;
+        return { clearScreen: true, output: system.mission.leave() };
       case 'briefing':
-        if (!values.length) return system.mission.briefing();
-        break;
+        return { value: system.mission.briefing().join('\n') };
       case 'hint':
-        if (!values.length) return [system.mission.hint()];
-        break;
-      case 'status':
-        if (!values.length) return [JSON.stringify(system.mission.status(), null, 2)];
-        break;
-      case 'submit':
-        if (values[0] === '--script' && (values.length === 2 || values.length === 3)) {
-          const seed = values[2] === undefined ? undefined : Number(values[2]);
+        return { value: system.mission.hint() };
+      case 'status': {
+        const m = system.mission.current();
+        return { value: { id: m?.id ?? '', status: m?.status ?? 'none' } };
+      }
+      case 'submit': {
+        if (values[0] === '--script') {
+          const seed = values[2];
           if (
             seed !== undefined &&
-            (!/^\d+$/.test(values[2]) || !Number.isSafeInteger(seed) || seed > 0xffffffff)
+            (typeof seed !== 'number' ||
+              !Number.isSafeInteger(seed) ||
+              seed < 0 ||
+              seed > 0xffffffff)
           )
             throw new Error('Seed must be an integer from 0 to 4294967295.');
-          return system.mission.verify(values[1], seed);
+          return {
+            output: await system.mission.verify(values[1] as string, seed as number | undefined),
+          };
         }
-        if (values.length === 1 && values[0] !== '--script')
-          return system.mission.submit(values[0]);
-        break;
+        const output = system.mission.submit(stringArguments(values)[0]);
+        return { output, value: system.mission.current()?.status === 'complete' };
+      }
     }
     throw new Error('Usage: ' + mission.usage);
   },

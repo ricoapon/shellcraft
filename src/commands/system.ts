@@ -19,6 +19,7 @@ export interface FileSystemApi {
   remove(path: string): void;
 }
 export interface CommandSystem {
+  display(value: import('../runtime/types').Value): void;
   capabilities: { has(id: string): boolean };
   commands: { list(): readonly CommandInfo[] };
   filesystem: FileSystemApi;

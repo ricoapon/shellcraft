@@ -1,11 +1,12 @@
-import { requireArguments, type Command } from './command';
+import { stringArguments, type Command } from './command';
+import { list, string } from '../runtime/types';
 export const neighbors: Command = {
   name: 'neighbors',
   usage: 'neighbors [host]',
   description: 'Discover connected hosts.',
+  signatures: [{ parameters: [string], minimum: 0, result: list(string) }],
   unlocked: (system) => system.mission.current()?.kind === 'network',
-  execute(args, system) {
-    requireArguments(args, 0, neighbors.usage!, 1);
-    return system.network.neighbors(args[0]);
-  },
+  execute: (args, system) => ({
+    value: [...system.network.neighbors(stringArguments(args)[0])].sort(),
+  }),
 };

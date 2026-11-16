@@ -1,13 +1,18 @@
-import { requireArguments, type Command } from './command';
-
+import { stringArguments, type Command } from './command';
+import { nothing } from '../runtime/types';
 export const save: Command = {
   name: 'save',
   usage: 'save <export|import>',
   description: 'Import or export a save.',
-  details: 'Export a local backup or select an exported save to restore.',
+  signatures: ['export', 'import'].map((prefix) => ({
+    prefix: [prefix],
+    parameters: [],
+    result: nothing,
+    terminalOnly: true,
+  })),
   execute(args) {
-    requireArguments(args, 1, save.usage!);
-    if (args[0] !== 'export' && args[0] !== 'import') throw new Error('Usage: ' + save.usage);
-    return { action: args[0] };
+    const [action] = stringArguments(args);
+    if (action !== 'export' && action !== 'import') throw new Error('Usage: save <export|import>');
+    return { action };
   },
 };

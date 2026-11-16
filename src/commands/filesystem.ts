@@ -1,104 +1,79 @@
-import { requireArguments, type Command } from './command';
-import { parseOptions } from './options';
-
-/** Adapt structured filesystem operations to human-readable shell commands. */
+import { stringArguments, type Command } from './command';
+import { fileType, list, nothing, string } from '../runtime/types';
 export const filesystemCommands: readonly Command[] = [
   {
     name: 'pwd',
-    description: 'Print the current directory.',
     usage: 'pwd',
-    execute(args, system) {
-      requireArguments(args, 0, 'pwd');
-      return [system.filesystem.directory()];
-    },
+    description: 'Show the current directory.',
+    signatures: [{ parameters: [], result: string }],
+    execute: (_args, system) => ({ value: system.filesystem.directory() }),
   },
   {
     name: 'ls',
-    description: 'List files and directories.',
+    usage: 'ls [path]',
+    description: 'List file records.',
     details:
-      'List multiple paths, or use -- before filenames starting with a dash. Options such as -l are reserved but not implemented. Dotfiles are hidden by default.',
-    usage: 'ls [path...]',
+      'List immediate children, including dotfiles, sorted by name. A file path returns a one-element list.',
+    signatures: [{ parameters: [string], minimum: 0, result: list(fileType) }],
     execute(args, system) {
-      const { options, operands } = parseOptions(args);
-      if (options.length) throw new Error(`ls: unsupported option: ${options[0]}`);
-      const paths = operands.length ? operands : ['.'];
-      return paths.flatMap((path) => {
-        try {
-          const entry = system.filesystem.stat(path);
-          if (entry.type === 'file') return [path];
-          const names = system.filesystem
-            .list(path)
-            .filter((child) => !child.name.startsWith('.'))
-            .map((child) => child.name);
-          return paths.length > 1 ? [`${path}:`, ...names] : names;
-        } catch (error) {
-          return [`ls: ${error instanceof Error ? error.message : 'Could not list path.'}`];
-        }
-      });
+      const [path = '.'] = stringArguments(args),
+        entry = system.filesystem.stat(path),
+        entries = entry.type === 'file' ? [entry] : [...system.filesystem.list(path)];
+      return {
+        value: entries
+          .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
+          .map((e) => ({ ...e })),
+      };
     },
   },
   {
     name: 'cd',
-    description: 'Change the current directory.',
     usage: 'cd <path>',
+    description: 'Change the current directory.',
+    signatures: [{ parameters: [string], result: nothing }],
     execute(args, system) {
-      requireArguments(args, 1, 'cd <path>');
-      system.filesystem.cd(args[0]);
-      return [];
+      system.filesystem.cd(stringArguments(args)[0]);
+      return {};
     },
   },
   {
     name: 'cat',
-    description: 'Print a text file.',
     usage: 'cat <path>',
+    description: 'Read file text.',
+    signatures: [{ parameters: [string], result: string }],
+    execute: (args, system) => ({ value: system.filesystem.read(stringArguments(args)[0]) }),
+  },
+  {
+    name: 'write',
+    usage: 'write <path> <text>',
+    description: 'Create or replace a file.',
+    details: 'The parent must exist. Level evidence is read-only. Quote text containing spaces.',
+    signatures: [{ parameters: [string, string], result: nothing }],
     execute(args, system) {
-      requireArguments(args, 1, 'cat <path>');
-      return [system.filesystem.read(args[0])];
+      const [path, text] = stringArguments(args);
+      system.filesystem.write(path, text);
+      return {};
     },
   },
   {
     name: 'mkdir',
-    description: 'Create a directory.',
-    details: 'The parent directory must already exist.',
     usage: 'mkdir <path>',
+    description: 'Create a directory.',
+    signatures: [{ parameters: [string], result: nothing }],
     execute(args, system) {
-      requireArguments(args, 1, 'mkdir <path>');
-      system.filesystem.mkdir(args[0]);
-      return [];
-    },
-  },
-  {
-    name: 'write',
-    description: 'Create or replace a text file.',
-    details:
-      'Replace a workspace file in full. Quote text containing spaces; use single quotes around JSON to preserve its double quotes. The parent directory must exist. Level evidence is read-only; use edit /home/solve.js for your personal code notebook while inside a level.',
-    example: 'write notes.txt "hello world"',
-    usage: 'write <path> "text"',
-    execute(args, system) {
-      requireArguments(args, 2, 'write <path> "text"');
-      system.filesystem.write(args[0], args[1]);
-      return [];
+      system.filesystem.mkdir(stringArguments(args)[0]);
+      return {};
     },
   },
   {
     name: 'rm',
-    description: 'Delete files.',
-    details:
-      'Delete one or more writable files. Use -- before filenames starting with a dash. Directories and options such as -r are not supported.',
-    example: 'rm -- -draft.txt',
-    usage: 'rm <path...>',
+    usage: 'rm <path>',
+    description: 'Remove a file.',
+    details: 'Accepts one file; directories are rejected.',
+    signatures: [{ parameters: [string], result: nothing }],
     execute(args, system) {
-      const { options, operands } = parseOptions(args);
-      if (options.length) throw new Error(`rm: unsupported option: ${options[0]}`);
-      if (!operands.length) throw new Error('Usage: rm <path...>');
-      return operands.flatMap((path) => {
-        try {
-          system.filesystem.remove(path);
-          return [];
-        } catch (error) {
-          return [`rm: ${error instanceof Error ? error.message : 'Could not delete file.'}`];
-        }
-      });
+      system.filesystem.remove(stringArguments(args)[0]);
+      return {};
     },
   },
 ];

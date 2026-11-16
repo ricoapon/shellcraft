@@ -1,14 +1,13 @@
-import { requireArguments, type Command } from './command';
+import { stringArguments, textSignature, type Command } from './command';
 export const ssh: Command = {
   name: 'ssh',
   usage: 'ssh <host>',
   description: 'Connect to a neighboring host.',
-  details:
-    'Move within the current level network. Home is outside it; use mission leave to return to your workspace.',
+  details: 'Home is outside the network; use mission leave to return to your workspace.',
+  signatures: [textSignature(1)],
   unlocked: (system) => system.mission.current()?.kind === 'network',
   execute(args, system) {
-    requireArguments(args, 1, ssh.usage!);
-    system.session.connect(args[0]);
-    return ['Connected to ' + system.session.host() + '.'];
+    system.session.connect(stringArguments(args)[0]);
+    return {};
   },
 };
